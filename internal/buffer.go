@@ -5,7 +5,7 @@ type Buffer[T any] struct {
 	queue chan T
 }
 
-// Offer push the active fd to the queue
+// Offer push the active fd to the queue, it will be deposed when buffer is full
 func (buffer *Buffer[T]) Offer(items ...T) {
 	for _, item := range items {
 		// depose fd when queue is full
@@ -29,6 +29,17 @@ func (buffer *Buffer[T]) Polling(stopCh <-chan struct{}, handler func(item T)) {
 	}
 }
 
+// Empty returns true if the buffer is empty
+func (buffer *Buffer[T]) Empty() bool {
+	return buffer.Length() == 0
+}
+
+// Length returns the length of buffer
+func (buffer *Buffer[T]) Length() int {
+	return len(buffer.queue)
+}
+
+// NewBuffer returns a new buffer with the given size
 func NewBuffer[T any](size int) *Buffer[T] {
 	return &Buffer[T]{
 		queue: make(chan T, size),

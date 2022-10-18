@@ -32,3 +32,25 @@ func TestBuffer_Polling(t *testing.T) {
 	}()
 	<-stop
 }
+
+func TestBuffer_Length(t *testing.T) {
+	buffer := NewBuffer[int](10)
+	assert.Equal(t, 0, buffer.Length())
+
+	buffer.Offer(1, 2, 3)
+	assert.Equal(t, 3, buffer.Length())
+
+	stop := make(chan struct{})
+	go buffer.Polling(stop, func(item int) {
+		fmt.Println("item: ", item)
+		fmt.Println("buffer length:", buffer.Length())
+	})
+}
+
+func TestBuffer_Empty(t *testing.T) {
+	buffer := NewBuffer[int](10)
+	assert.True(t, buffer.Empty())
+
+	buffer.Offer(1, 2, 3)
+	assert.False(t, buffer.Empty())
+}
