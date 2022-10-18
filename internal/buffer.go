@@ -11,6 +11,11 @@ func (buffer *Buffer[T]) Offer(items ...T) {
 		// depose fd when queue is full
 		select {
 		case buffer.queue <- item:
+		default:
+			// must add default option,
+			// otherwise it will:
+			//		fatal error: all goroutines are asleep- deadlock!
+
 		}
 	}
 }

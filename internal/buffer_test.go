@@ -15,6 +15,9 @@ func TestNewBuffer(t *testing.T) {
 func TestBuffer_Offer(t *testing.T) {
 	buffer := NewBuffer[int](10)
 	buffer.Offer(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+	// those numbers should be deposed
+	buffer.Offer(11, 12, 13)
 }
 
 func TestBuffer_Polling(t *testing.T) {
