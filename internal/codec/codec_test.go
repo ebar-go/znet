@@ -8,6 +8,11 @@ import (
 func TestDefault(t *testing.T) {
 	codec := Default()
 	assert.NotNil(t, codec)
+
+	codecWithOptions := Default(func(options *Options) {
+		options.headerSize = 30
+	})
+	assert.NotNil(t, codecWithOptions)
 }
 
 func TestDefaultCodec_Pack(t *testing.T) {
@@ -15,6 +20,13 @@ func TestDefaultCodec_Pack(t *testing.T) {
 	bytes, err := codec.Pack(&Packet{Operate: 1, ContentType: ContentTypeJSON, Seq: 1}, map[string]any{"foo": "bar"})
 	assert.Nil(t, err)
 	assert.NotEmpty(t, bytes)
+
+	x := map[string]interface{}{
+		"foo": make(chan int),
+	}
+	bytes, err = codec.Pack(&Packet{Operate: 2, ContentType: ContentTypeJSON, Seq: 2}, x)
+	assert.NotNil(t, err)
+	assert.Empty(t, bytes)
 }
 
 func TestDefaultCodec_Unpack(t *testing.T) {
@@ -27,4 +39,7 @@ func TestDefaultCodec_Unpack(t *testing.T) {
 	assert.Equal(t, target.Operate, packet.Operate)
 	assert.Equal(t, target.ContentType, packet.ContentType)
 	assert.Equal(t, target.Seq, packet.Seq)
+
+	_, err = codec.Unpack([]byte("foo"))
+	assert.NotNil(t, err)
 }

@@ -61,7 +61,7 @@ func (codec DefaultCodec) Pack(packet *Packet, data any) ([]byte, error) {
 	codec.endian.PutInt16(buf[packetLengthOffset:operateOffset], packet.Operate)
 	codec.endian.PutInt16(buf[operateOffset:contentTypeOffset], packet.ContentType)
 	codec.endian.PutInt16(buf[contentTypeOffset:seqOffset], packet.Seq)
-	codec.endian.PutString(buf[seqOffset:], string(body))
+	codec.endian.PutString(buf[codec.options.headerSize:], string(body))
 	return buf, nil
 }
 
@@ -82,7 +82,7 @@ func (codec DefaultCodec) Unpack(msg []byte) (*Packet, error) {
 	packet.Seq = codec.endian.Int16(msg[contentTypeOffset:seqOffset])
 
 	if length > seqOffset {
-		packet.Body = msg[seqOffset:length]
+		packet.Body = msg[codec.options.headerSize:length]
 	}
 
 	return packet, nil

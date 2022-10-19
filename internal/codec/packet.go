@@ -2,6 +2,7 @@ package codec
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -22,7 +23,12 @@ func (packet Packet) Marshal(data any) ([]byte, error) {
 		return json.Marshal(data)
 	}
 
-	return proto.Marshal(data.(proto.Message))
+	message, ok := data.(proto.Message)
+	if !ok {
+		return nil, errors.New("unsupported proto object")
+	}
+
+	return proto.Marshal(message)
 }
 
 func (packet Packet) Unmarshal(data any) error {
@@ -30,5 +36,10 @@ func (packet Packet) Unmarshal(data any) error {
 		return json.Unmarshal(packet.Body, data)
 	}
 
-	return proto.Unmarshal(packet.Body, data.(proto.Message))
+	message, ok := data.(proto.Message)
+	if !ok {
+		return errors.New("unsupported proto object")
+	}
+
+	return proto.Unmarshal(packet.Body, message)
 }
