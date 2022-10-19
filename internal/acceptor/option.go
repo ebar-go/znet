@@ -14,6 +14,6 @@ func DefaultOptions() *Options {
 		Core:            runtime.NumCPU(),
 		ReadBufferSize:  4096,
 		WriteBufferSize: 4096,
-		Keepalive:       true,
+		Keepalive:       false,
 	}
 }
