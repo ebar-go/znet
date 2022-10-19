@@ -2,12 +2,13 @@ package znet
 
 import (
 	"github.com/ebar-go/ego/utils/runtime"
+	"github.com/ebar-go/znet/internal"
 )
 
 // Engine represents context manager
 type Engine struct {
 	handleChains    []HandleFunc
-	contextProvider ContextProvider
+	contextProvider internal.Provider[*Context]
 }
 
 // Use registers middleware
@@ -17,7 +18,7 @@ func (e *Engine) Use(handler ...HandleFunc) {
 
 // AcquireContext acquire context
 func (e *Engine) AcquireContext() *Context {
-	return e.contextProvider.AcquireContext()
+	return e.contextProvider.Acquire()
 }
 
 // HandleContext handles context
@@ -25,7 +26,7 @@ func (e *Engine) HandleContext(ctx *Context) {
 	defer func() {
 		runtime.HandleCrash()
 		// release Context
-		e.contextProvider.ReleaseContext(ctx)
+		e.contextProvider.Release(ctx)
 	}()
 
 	e.invokeContextHandler(ctx, 0)
@@ -41,7 +42,7 @@ func (e *Engine) invokeContextHandler(ctx *Context, index int8) {
 
 func NewEngine() *Engine {
 	engine := &Engine{}
-	engine.contextProvider = NewSyncPoolContextProvider(func() interface{} {
+	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {
 		return &Context{engine: engine}
 	})
 	return engine
