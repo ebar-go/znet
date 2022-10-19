@@ -1,8 +1,19 @@
 package acceptor
 
+import "runtime"
+
 type Options struct {
-	core            int
-	readBufferSize  int
-	writeBufferSize int
-	keepalive       bool
+	Core            int
+	ReadBufferSize  int
+	WriteBufferSize int
+	Keepalive       bool
+}
+
+func DefaultOptions() *Options {
+	return &Options{
+		Core:            runtime.NumCPU(),
+		ReadBufferSize:  4096,
+		WriteBufferSize: 4096,
+		Keepalive:       true,
+	}
 }

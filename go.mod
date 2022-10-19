@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/ebar-go/ego v1.1.4
+	github.com/gobwas/ws v1.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/sys v0.1.0
@@ -11,6 +12,8 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect

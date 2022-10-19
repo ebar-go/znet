@@ -1,17 +1,19 @@
 package acceptor
 
 import (
+	"github.com/ebar-go/ego/errors"
 	"github.com/ebar-go/ego/utils/runtime"
-	"github.com/pkg/errors"
 	"log"
 	"net"
 )
 
+// TCPAcceptor represents tcp acceptor
 type TCPAcceptor struct {
 	base    *Acceptor
 	options *Options
 }
 
+// Run runs the acceptor
 func (server *TCPAcceptor) Run(bind string) (err error) {
 	addr, err := net.ResolveTCPAddr("tcp", bind)
 	if err != nil {
@@ -23,7 +25,8 @@ func (server *TCPAcceptor) Run(bind string) (err error) {
 		return
 	}
 
-	for i := 0; i < server.options.core; i++ {
+	// use multiple cpus to improve performance
+	for i := 0; i < server.options.Core; i++ {
 		go func() {
 			defer runtime.HandleCrash()
 			server.accept(lis)
@@ -33,10 +36,12 @@ func (server *TCPAcceptor) Run(bind string) (err error) {
 	return
 }
 
+// Shutdown shuts down acceptor
 func (acceptor *TCPAcceptor) Shutdown() {
 	acceptor.base.Done()
 }
 
+// accept connection
 func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
 	var (
 		conn *net.TCPConn
@@ -53,15 +58,15 @@ func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
 				log.Printf("listener.Accept(\"%s\") error(%v)", lis.Addr().String(), err)
 				continue
 			}
-			if err = conn.SetKeepAlive(acceptor.options.keepalive); err != nil {
+			if err = conn.SetKeepAlive(acceptor.options.Keepalive); err != nil {
 				log.Printf("conn.SetKeepAlive() error(%v)", err)
 				continue
 			}
-			if err = conn.SetReadBuffer(acceptor.options.readBufferSize); err != nil {
+			if err = conn.SetReadBuffer(acceptor.options.ReadBufferSize); err != nil {
 				log.Printf("conn.SetReadBuffer() error(%v)", err)
 				continue
 			}
-			if err = conn.SetWriteBuffer(acceptor.options.writeBufferSize); err != nil {
+			if err = conn.SetWriteBuffer(acceptor.options.WriteBufferSize); err != nil {
 				log.Printf("conn.SetWriteBuffer() error(%v)", err)
 				continue
 			}
@@ -72,13 +77,10 @@ func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
 
 }
 
-func NewTCPTCPAcceptor(handler func(conn net.Conn)) *TCPAcceptor {
+// NewTCPAcceptor returns a new instance of the TCPAcceptor
+func NewTCPAcceptor(options *Options, handler func(conn net.Conn)) *TCPAcceptor {
 	return &TCPAcceptor{
-		base: NewAcceptor(handler),
-		options: &Options{
-			core:            4,
-			readBufferSize:  4096,
-			writeBufferSize: 4096,
-			keepalive:       false,
-		}}
+		base:    NewAcceptor(handler),
+		options: options,
+	}
 }
