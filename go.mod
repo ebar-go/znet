@@ -6,6 +6,8 @@ require (
 	github.com/ebar-go/ego v1.1.4
 	github.com/gobwas/ws v1.1.0
 	github.com/golang/protobuf v1.5.2
+	github.com/pkg/errors v0.9.1
+	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.8.0
 	golang.org/x/sys v0.1.0
 )

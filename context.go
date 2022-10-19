@@ -51,7 +51,7 @@ func (ctx *Context) Next() {
 }
 func (ctx *Context) Abort() {
 	ctx.index = maxIndex
-	log.Printf("[%s] context aborted\n", ctx.Conn().UUID())
+	log.Printf("[%s] context aborted\n", ctx.Conn().ID())
 }
 
 func (ctx *Context) reset(conn *Connection, body []byte) {

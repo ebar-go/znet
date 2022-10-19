@@ -3,7 +3,6 @@ package znet
 import (
 	"github.com/ebar-go/znet/internal/codec"
 	"github.com/pkg/errors"
-	"log"
 	"sync"
 )
 
@@ -107,13 +106,9 @@ func (router *Router) handleNotFound(ctx *Context) {
 
 func NewRouter() *Router {
 	return &Router{
-		handlers: map[int16]Handler{},
-		codec:    codec.Default(),
-		errorHandler: func(ctx *Context, err error) {
-			log.Printf("[%s] error: %v\n", ctx.Conn().UUID(), err)
-		},
-		notFoundHandler: func(ctx *Context) {
-			log.Printf("[%s] operate not found:%d\n", ctx.Conn().UUID(), ctx.packet.Operate)
-		},
+		handlers:        map[int16]Handler{},
+		codec:           codec.Default(),
+		errorHandler:    nil,
+		notFoundHandler: nil,
 	}
 }

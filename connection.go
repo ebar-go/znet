@@ -3,11 +3,13 @@ package znet
 import (
 	"errors"
 	"github.com/ebar-go/ego/utils/binary"
+	"github.com/ebar-go/znet/internal"
 	uuid "github.com/satori/go.uuid"
 	"net"
 	"sync"
 )
 
+// ConnectionHandler
 type ConnectionHandler func(conn *Connection)
 
 // Connection represents client connection
@@ -16,19 +18,23 @@ type Connection struct {
 	fd int
 	// uuid is the unique identifier
 	uuid string
-	// conn is the connection
-	conn             net.Conn
-	once             sync.Once
+	// instance is the connection
+	instance net.Conn
+	// once make sure Close() is called only one times
+	once sync.Once
+	// beforeCloseHooks is a list of hooks that are called before the connection
 	beforeCloseHooks []func(connection *Connection)
-	property         *Property
+	// is a map of properties
+	property *internal.Container[string, any]
 }
 
-func (conn *Connection) Property() *Property {
+// Property return properties container
+func (conn *Connection) Property() *internal.Container[string, any] {
 	return conn.property
 }
 
 // UIID returns the uuid associated with the connection
-func (conn *Connection) UUID() string { return conn.uuid }
+func (conn *Connection) ID() string { return conn.uuid }
 
 // Push send message to the connection
 func (conn *Connection) Push(p []byte) {
@@ -37,12 +43,12 @@ func (conn *Connection) Push(p []byte) {
 
 // Write writes message to the connection
 func (conn *Connection) Write(p []byte) (int, error) {
-	return conn.conn.Write(p)
+	return conn.instance.Write(p)
 }
 
 // Read reads message from the connection
 func (conn *Connection) Read(p []byte) (int, error) {
-	return conn.conn.Read(p)
+	return conn.instance.Read(p)
 }
 
 // Close closes the connection
@@ -51,7 +57,7 @@ func (conn *Connection) Close() {
 		for _, hook := range conn.beforeCloseHooks {
 			hook(conn)
 		}
-		_ = conn.conn.Close()
+		_ = conn.instance.Close()
 	})
 }
 
@@ -60,8 +66,8 @@ func (conn *Connection) AddBeforeCloseHook(hooks ...func(conn *Connection)) {
 	conn.beforeCloseHooks = append(conn.beforeCloseHooks, hooks...)
 }
 
-// readLine reads a line message from the connection
-func (conn *Connection) readLine(buf []byte, packetLengthSize int) (n int, err error) {
+// ReadPacket reads a line message from the connection
+func (conn *Connection) ReadPacket(buf []byte, packetLengthSize int) (n int, err error) {
 	// if not set packetLengthSize, read buf directly
 	if packetLengthSize == 0 {
 		n, err = conn.Read(buf)
@@ -84,32 +90,13 @@ func (conn *Connection) readLine(buf []byte, packetLengthSize int) (n int, err e
 	return
 
 }
+
+// NewConnection returns a new Connection instance
 func NewConnection(conn net.Conn, fd int) *Connection {
-	return &Connection{conn: conn, fd: fd, uuid: uuid.NewV4().String(), property: &Property{properties: map[string]any{}}}
-}
-
-type Property struct {
-	mu         sync.RWMutex // guards the properties
-	properties map[string]any
-}
-
-func (p *Property) Set(key string, value any) {
-	p.mu.Lock()
-	p.properties[key] = value
-	p.mu.Unlock()
-}
-
-func (p *Property) Get(key string) any {
-	p.mu.RLock()
-	property := p.properties[key]
-	p.mu.RUnlock()
-	return property
-}
-
-func (p *Property) GetString(key string) string {
-	property := p.Get(key)
-	if property == nil {
-		return ""
+	return &Connection{
+		instance: conn,
+		fd:       fd,
+		uuid:     uuid.NewV4().String(),
+		property: internal.NewContainer[string, any](),
 	}
-	return property.(string)
 }

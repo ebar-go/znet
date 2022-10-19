@@ -65,7 +65,7 @@ func (reactor *Reactor) handleActiveConnection(active int) {
 
 	bytes := pool.GetByte(reactor.maxReadBufferSize)
 	// read message
-	n, err := conn.readLine(bytes, reactor.packetLengthSize)
+	n, err := conn.ReadPacket(bytes, reactor.packetLengthSize)
 	if err != nil {
 		conn.Close()
 		pool.PutByte(bytes)
