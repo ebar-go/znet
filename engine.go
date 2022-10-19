@@ -37,6 +37,9 @@ func (e *Engine) HandleContext(ctx *Context) {
 
 // invokeContextHandler invoke context handler chain
 func (e *Engine) invokeContextHandler(ctx *Context, index int8) {
+	if int(index) > len(e.handleChains)-1 {
+		return
+	}
 	e.handleChains[index](ctx)
 }
 

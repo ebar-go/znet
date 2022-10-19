@@ -16,12 +16,14 @@ type HandleFunc func(ctx *Context)
 
 // Context represents a context for request
 type Context struct {
-	context.Context
+	index int8
+	msg   []byte
+
 	engine  *Engine
 	conn    *Connection
-	body    []byte
-	index   int8
 	request *codec.Packet
+
+	context.Context
 }
 
 // Request return the request packet
@@ -32,11 +34,6 @@ func (ctx *Context) Request() *codec.Packet {
 // Conn return instance of Connection
 func (ctx *Context) Conn() *Connection {
 	return ctx.conn
-}
-
-// RawBody returns request raw body
-func (ctx *Context) RawBody() []byte {
-	return ctx.body
 }
 
 // Next invoke next handler
@@ -54,9 +51,9 @@ func (ctx *Context) Abort() {
 }
 
 // reset clear the context properties
-func (ctx *Context) reset(conn *Connection, body []byte) {
+func (ctx *Context) reset(conn *Connection, msg []byte) {
 	ctx.index = 0
-	ctx.body = body
+	ctx.msg = msg
 	ctx.conn = conn
 	ctx.Context = context.Background()
 }

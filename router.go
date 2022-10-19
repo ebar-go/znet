@@ -12,7 +12,7 @@ type Handler func(ctx *Context) (any, error)
 func StandardHandler[Request, Response any](action func(ctx *Context, request *Request) (*Response, error)) Handler {
 	return func(ctx *Context) (any, error) {
 		request := new(Request)
-		if err := ctx.Bind(request); err != nil {
+		if err := ctx.Request().Unmarshal(request); err != nil {
 			return nil, err
 		}
 		return action(ctx, request)
@@ -56,17 +56,17 @@ func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
 
 func (router *Router) unpack(ctx *Context) {
 	// unpack
-	packet, err := router.codec.Unpack(ctx.body)
+	packet, err := router.codec.Unpack(ctx.msg)
 	if err != nil {
 		router.handleError(ctx, err)
 		ctx.Abort()
 		return
 	}
-	ctx.packet = packet
+	ctx.request = packet
 	ctx.Next()
 }
 func (router *Router) onRequest(ctx *Context) {
-	packet := ctx.packet
+	packet := ctx.request
 	// match handler
 	router.rwm.RLock()
 	handler, ok := router.handlers[packet.Operate]
@@ -82,7 +82,6 @@ func (router *Router) onRequest(ctx *Context) {
 		return
 	}
 
-	packet.Operate++
 	packet.Seq++
 	// pack response
 	msg, err := router.codec.Pack(packet, response)
