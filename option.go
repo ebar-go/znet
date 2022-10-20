@@ -14,6 +14,7 @@ func (options *Options) NewReactor() *Reactor {
 	if err != nil {
 		panic(err)
 	}
+	reactor.callback = newCallback(options.OnConnect, options.OnDisconnect)
 	return reactor
 }
 

@@ -6,7 +6,6 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
 	"log"
-	"net"
 	"sync"
 )
 
@@ -24,12 +23,11 @@ type Instance interface {
 
 // App represents im framework public access api.
 type App struct {
-	options  *Options
-	schemas  []internal.Schema
-	callback *Callback
-	router   *Router
-	reactor  *Reactor
-	once     sync.Once
+	options *Options
+	schemas []internal.Schema
+	router  *Router
+	reactor *Reactor
+	once    sync.Once
 }
 
 // Listen register different protocols
@@ -56,7 +54,7 @@ func (app *App) Run(stopCh <-chan struct{}) error {
 	defer schemeCancel()
 	for _, schema := range app.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(schemaCtx.Done(), app.handleNewConnection); err != nil {
+		if err := schema.Listen(schemaCtx.Done(), app.reactor.onConnect); err != nil {
 			return err
 		}
 
@@ -84,26 +82,6 @@ func (app *App) shutdown() {
 	log.Println("application shutdown complete")
 }
 
-func (app *App) handleNewConnection(conn net.Conn) {
-	connection := NewConnection(conn, app.reactor.poll.SocketFD(conn))
-	if err := app.reactor.poll.Add(connection.fd); err != nil {
-		connection.Close()
-		return
-	}
-	app.reactor.thread.RegisterConnection(connection)
-
-	connection.AddBeforeCloseHook(
-		app.callback.OnConnect,
-		func(conn *Connection) {
-			_ = app.reactor.poll.Remove(conn.fd)
-		},
-		app.reactor.thread.UnregisterConnection,
-	)
-
-	app.callback.OnDisconnect(connection)
-
-}
-
 // New returns a new app instance
 func New(opts ...Option) Instance {
 	options := defaultOptions()
@@ -112,9 +90,8 @@ func New(opts ...Option) Instance {
 	}
 
 	return &App{
-		options:  options,
-		reactor:  options.NewReactor(),
-		callback: newCallback(options.OnConnect, options.OnDisconnect),
-		router:   NewRouter(),
+		options: options,
+		reactor: options.NewReactor(),
+		router:  NewRouter(),
 	}
 }

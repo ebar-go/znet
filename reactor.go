@@ -6,14 +6,17 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal/poller"
 	"log"
+	"net"
 )
 
 // Reactor represents the epoll model for processing action connections.
 type Reactor struct {
-	poll              poller.Poller
-	thread            *SubReactor
-	engine            *Engine
-	worker            pool.Worker
+	poll     poller.Poller
+	thread   *SubReactor
+	engine   *Engine
+	worker   pool.Worker
+	callback *Callback
+	
 	packetLengthSize  int
 	maxReadBufferSize int
 }
@@ -26,7 +29,7 @@ func (reactor *Reactor) Run(stopCh <-chan struct{}) {
 	go func() {
 		runtime.HandleCrash()
 		// start thead polling task with active connection handler
-		reactor.thread.Polling(ctx.Done(), reactor.handleActiveConnection)
+		reactor.thread.Polling(ctx.Done(), reactor.onActive)
 	}()
 
 	reactor.run(stopCh)
@@ -52,10 +55,30 @@ func (reactor *Reactor) run(stopCh <-chan struct{}) {
 	}
 }
 
-// handleActiveConnection handles active connection request
-func (reactor *Reactor) handleActiveConnection(active int) {
+// onConnect is called when the connection is established
+func (reactor *Reactor) onConnect(conn net.Conn) {
+	connection := NewConnection(conn, reactor.poll.SocketFD(conn))
+	if err := reactor.poll.Add(connection.fd); err != nil {
+		connection.Close()
+		return
+	}
+	reactor.thread.RegisterConnection(connection)
+
+	connection.AddBeforeCloseHook(
+		reactor.callback.OnConnect,
+		func(conn *Connection) {
+			_ = reactor.poll.Remove(conn.fd)
+		},
+		reactor.thread.UnregisterConnection,
+	)
+
+	reactor.callback.OnDisconnect(connection)
+}
+
+// onActive is called when the connection is active
+func (reactor *Reactor) onActive(fd int) {
 	// receive an active connection
-	conn := reactor.thread.GetConnection(active)
+	conn := reactor.thread.GetConnection(fd)
 	if conn == nil {
 		return
 	}
