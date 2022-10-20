@@ -73,8 +73,7 @@ func (reactor *Reactor) handleActiveConnection(active int) {
 	}
 
 	// prepare Context
-	ctx := reactor.engine.AcquireContext()
-	ctx.reset(conn, bytes[:n])
+	ctx := reactor.engine.NewContext(conn, bytes[:n])
 
 	// process request
 	reactor.worker.Schedule(func() {
@@ -109,7 +108,7 @@ func NewReactor(options ReactorOptions) (*Reactor, error) {
 	reactor := &Reactor{
 		poll:              poll,
 		engine:            NewEngine(),
-		worker:            pool.NewWorkerPool(options.WorkerPoolSize),
+		worker:            pool.NewGoroutinePool(options.WorkerPoolSize),
 		packetLengthSize:  options.PacketLengthSize,
 		maxReadBufferSize: options.MaxReadBufferSize,
 		thread:            NewSubReactor(options.ThreadQueueCapacity),
