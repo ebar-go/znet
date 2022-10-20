@@ -16,9 +16,11 @@ func (e *Engine) Use(handler ...HandleFunc) {
 	e.handleChains = append(e.handleChains, handler...)
 }
 
-// AcquireContext acquire context
-func (e *Engine) AcquireContext() *Context {
-	return e.contextProvider.Acquire()
+// NewContext return a new Context instance
+func (e *Engine) NewContext(conn *Connection, bytes []byte) *Context {
+	ctx := e.contextProvider.Acquire()
+	ctx.reset(conn, bytes)
+	return ctx
 }
 
 // HandleContext handles context

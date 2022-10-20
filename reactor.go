@@ -73,8 +73,7 @@ func (reactor *Reactor) handleActiveConnection(active int) {
 	}
 
 	// prepare Context
-	ctx := reactor.engine.AcquireContext()
-	ctx.reset(conn, bytes[:n])
+	ctx := reactor.engine.NewContext(conn, bytes[:n])
 
 	// process request
 	reactor.worker.Schedule(func() {
