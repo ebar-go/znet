@@ -25,7 +25,8 @@ type Router struct {
 	handlers        map[int16]Handler
 	codec           codec.Codec
 	errorHandler    func(ctx *Context, err error)
-	notFoundHandler func(ctx *Context)
+	notFoundHandler HandleFunc
+	requestHandler  HandleFunc
 }
 
 // WithCodec is allowed to be used with the given codec, default is codec.DefaultCodec
@@ -55,6 +56,7 @@ func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
 }
 
 func (router *Router) unpack(ctx *Context) {
+
 	// unpack
 	packet, err := router.codec.Unpack(ctx.msg)
 	if err != nil {
@@ -64,6 +66,13 @@ func (router *Router) unpack(ctx *Context) {
 	}
 	ctx.request = packet
 	ctx.Next()
+}
+func (router *Router) handleRequest(ctx *Context) {
+	if router.requestHandler != nil {
+		router.requestHandler(ctx)
+	} else {
+		router.onRequest(ctx)
+	}
 }
 func (router *Router) onRequest(ctx *Context) {
 	packet := ctx.request

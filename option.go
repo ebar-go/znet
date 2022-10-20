@@ -9,8 +9,27 @@ type Options struct {
 	Reactor ReactorOptions
 }
 
-func (options *Options) NewReactor() *Reactor {
-	reactor, err := NewReactor(options.Reactor)
+// ReactorOptions represents the options for the reactor
+type ReactorOptions struct {
+	// EpollBufferSize is the size of the active connections in every duration
+	EpollBufferSize int
+
+	// WorkerPollSize is the size of the worker pool
+	WorkerPoolSize int
+
+	// PacketLengthSize is the size of the packet length offset
+	PacketLengthSize int
+
+	// ThreadQueueCapacity is the cap of the thread queue
+	ThreadQueueCapacity int
+
+	MaxReadBufferSize int
+
+	SubReactorShardCount int
+}
+
+func (options *Options) NewMainReactor() *MainReactor {
+	reactor, err := NewMainReactor(options.Reactor)
 	if err != nil {
 		panic(err)
 	}
@@ -25,11 +44,12 @@ func defaultOptions() *Options {
 		OnConnect:    func(conn *Connection) {},
 		OnDisconnect: func(conn *Connection) {},
 		Reactor: ReactorOptions{
-			EpollBufferSize:     100,
-			WorkerPoolSize:      1000,
-			PacketLengthSize:    4,
-			ThreadQueueCapacity: 100,
-			MaxReadBufferSize:   512,
+			EpollBufferSize:      100,
+			WorkerPoolSize:       1000,
+			PacketLengthSize:     4,
+			ThreadQueueCapacity:  100,
+			MaxReadBufferSize:    512,
+			SubReactorShardCount: 32,
 		},
 	}
 }

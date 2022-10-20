@@ -1,8 +1,17 @@
 package znet
 
 import (
+	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
 )
+
+type SubReactorInstance interface {
+	RegisterConnection(conn *Connection)
+	UnregisterConnection(conn *Connection)
+	GetConnection(fd int) *Connection
+	Offer(fds ...int)
+	Polling(stopCh <-chan struct{}, handler func(active int))
+}
 
 // SubReactor represents sub reactor
 type SubReactor struct {
@@ -44,5 +53,44 @@ func NewSubReactor(bufferSize int) *SubReactor {
 	return &SubReactor{
 		buffer:    internal.NewBuffer[int](bufferSize),
 		container: internal.NewContainer[int, *Connection](),
+	}
+}
+
+type ShardSubReactor struct {
+	container internal.ShardContainer[*SubReactor]
+}
+
+func (shard *ShardSubReactor) RegisterConnection(conn *Connection) {
+	shard.container.GetShard(conn.fd).RegisterConnection(conn)
+}
+
+func (shard *ShardSubReactor) UnregisterConnection(conn *Connection) {
+	shard.container.GetShard(conn.fd).UnregisterConnection(conn)
+}
+
+func (shard *ShardSubReactor) GetConnection(fd int) *Connection {
+	return shard.container.GetShard(fd).GetConnection(fd)
+}
+
+func (shard *ShardSubReactor) Offer(fds ...int) {
+	for _, fd := range fds {
+		shard.container.GetShard(fd).Offer(fd)
+	}
+}
+
+func (shard *ShardSubReactor) Polling(stopCh <-chan struct{}, handler func(active int)) {
+	shard.container.Iterator(func(sub *SubReactor) {
+		go func() {
+			defer runtime.HandleCrash()
+			sub.Polling(stopCh, handler)
+		}()
+	})
+}
+
+func NewShardSubReactor(shardCount, bufferSize int) *ShardSubReactor {
+	return &ShardSubReactor{
+		container: internal.NewShardContainer[*SubReactor](shardCount, func() *SubReactor {
+			return NewSubReactor(bufferSize)
+		}),
 	}
 }

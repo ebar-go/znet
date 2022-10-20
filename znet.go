@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-// Instance represents an app interface
+// Instance represents an reactor interface
 type Instance interface {
 	// Router return an router instance
 	Router() *Router
@@ -16,42 +16,42 @@ type Instance interface {
 	// Listen listens for different schema and address
 	Listen(protocol string, addr string)
 
-	// Run runs the application with the given signal handler
+	// Run runs the reactorlication with the given signal handler
 	Run(stopCh <-chan struct{}) error
 }
 
-// App represents im framework public access api.
-type App struct {
+// Reactor represents im framework public access api.
+type Reactor struct {
 	options *Options
 	schemas []internal.Schema
 	router  *Router
-	reactor *Reactor
+	main    *MainReactor
 }
 
 // Listen register different protocols
-func (app *App) Listen(protocol string, addr string) {
-	app.schemas = append(app.schemas, internal.NewSchema(protocol, addr))
+func (reactor *Reactor) Listen(protocol string, addr string) {
+	reactor.schemas = append(reactor.schemas, internal.NewSchema(protocol, addr))
 }
 
 // Router return instance of Router
-func (app *App) Router() *Router {
-	return app.router
+func (reactor *Reactor) Router() *Router {
+	return reactor.router
 }
 
-// Run starts the app
-func (app *App) Run(stopCh <-chan struct{}) error {
+// Run starts the reactor
+func (reactor *Reactor) Run(stopCh <-chan struct{}) error {
 	ctx := context.Background()
-	if len(app.schemas) == 0 {
+	if len(reactor.schemas) == 0 {
 		return errors.New("empty listen target")
 	}
 
 	// prepare servers
 	schemaCtx, schemeCancel := context.WithCancel(ctx)
-	// cancel schema context when app is stopped
+	// cancel schema context when reactor is stopped
 	defer schemeCancel()
-	for _, schema := range app.schemas {
+	for _, schema := range reactor.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(schemaCtx.Done(), app.reactor.onConnect); err != nil {
+		if err := schema.Listen(schemaCtx.Done(), reactor.main.onConnect); err != nil {
 			return err
 		}
 
@@ -59,36 +59,36 @@ func (app *App) Run(stopCh <-chan struct{}) error {
 	}
 
 	// prepare reactor
-	app.reactor.engine.Use(app.router.unpack)
-	app.reactor.engine.Use(app.options.Middlewares...)
-	app.reactor.engine.Use(app.router.onRequest)
+	reactor.main.engine.Use(reactor.router.unpack)
+	reactor.main.engine.Use(reactor.options.Middlewares...)
+	reactor.main.engine.Use(reactor.router.handleRequest)
 
 	reactorCtx, reactorCancel := context.WithCancel(ctx)
-	// cancel reactor context when app is stopped
+	// cancel reactor context when reactor is stopped
 	defer reactorCancel()
 	go func() {
 		defer runtime.HandleCrash()
-		app.reactor.Run(reactorCtx.Done())
+		reactor.main.Run(reactorCtx.Done())
 	}()
 
-	runtime.WaitClose(stopCh, app.shutdown)
+	runtime.WaitClose(stopCh, reactor.shutdown)
 	return nil
 }
 
-func (app *App) shutdown() {
-	log.Println("event-loop shutdown complete")
+func (reactor *Reactor) shutdown() {
+	log.Println("server shutdown complete")
 }
 
-// New returns a new app instance
+// New returns a new reactor instance
 func New(opts ...Option) Instance {
 	options := defaultOptions()
 	for _, setter := range opts {
 		setter(options)
 	}
 
-	return &App{
+	return &Reactor{
 		options: options,
-		reactor: options.NewReactor(),
+		main:    options.NewMainReactor(),
 		router:  NewRouter(),
 	}
 }

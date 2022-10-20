@@ -9,34 +9,35 @@ import (
 	"net"
 )
 
-// Reactor represents the epoll model for processing action connections.
-type Reactor struct {
-	poll     poller.Poller
-	thread   *SubReactor
+// MainReactor represents the epoll model for processing action connections.
+type MainReactor struct {
+	options ReactorOptions
+	// poll use to listen active connections
+	poll poller.Poller
+
+	//
+	sub      SubReactorInstance
 	engine   *Engine
 	worker   pool.Worker
 	callback *Callback
-
-	packetLengthSize  int
-	maxReadBufferSize int
 }
 
-// Run runs the Reactor with the given signal.
-func (reactor *Reactor) Run(stopCh <-chan struct{}) {
+// Run runs the MainReactor with the given signal.
+func (reactor *MainReactor) Run(stopCh <-chan struct{}) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// cancel context when the given signal is closed
 	defer cancel()
 	go func() {
 		runtime.HandleCrash()
 		// start thead polling task with active connection handler
-		reactor.thread.Polling(ctx.Done(), reactor.onActive)
+		reactor.sub.Polling(ctx.Done(), reactor.onActive)
 	}()
 
 	reactor.run(stopCh)
 }
 
 // run receive active connection file descriptor and offer to thread
-func (reactor *Reactor) run(stopCh <-chan struct{}) {
+func (reactor *MainReactor) run(stopCh <-chan struct{}) {
 	for {
 		select {
 		case <-stopCh:
@@ -50,43 +51,43 @@ func (reactor *Reactor) run(stopCh <-chan struct{}) {
 			}
 
 			// push the active connections to queue
-			reactor.thread.Offer(active...)
+			reactor.sub.Offer(active...)
 		}
 	}
 }
 
 // onConnect is called when the connection is established
-func (reactor *Reactor) onConnect(conn net.Conn) {
+func (reactor *MainReactor) onConnect(conn net.Conn) {
 	connection := NewConnection(conn, reactor.poll.SocketFD(conn))
 	if err := reactor.poll.Add(connection.fd); err != nil {
 		connection.Close()
 		return
 	}
-	reactor.thread.RegisterConnection(connection)
+	reactor.sub.RegisterConnection(connection)
 
 	connection.AddBeforeCloseHook(
-		reactor.callback.OnConnect,
+		reactor.callback.OnDisconnect,
 		func(conn *Connection) {
 			_ = reactor.poll.Remove(conn.fd)
 		},
-		reactor.thread.UnregisterConnection,
+		reactor.sub.UnregisterConnection,
 	)
 
-	reactor.callback.OnDisconnect(connection)
+	reactor.callback.OnConnect(connection)
 }
 
 // onActive is called when the connection is active
-func (reactor *Reactor) onActive(fd int) {
+func (reactor *MainReactor) onActive(fd int) {
 	// receive an active connection
-	conn := reactor.thread.GetConnection(fd)
+	conn := reactor.sub.GetConnection(fd)
 	if conn == nil {
 		return
 	}
 
 	// get bytes from pool, and release after processed
-	bytes := pool.GetByte(reactor.maxReadBufferSize)
+	bytes := pool.GetByte(reactor.options.MaxReadBufferSize)
 	// read message
-	n, err := conn.ReadPacket(bytes, reactor.packetLengthSize)
+	n, err := conn.ReadPacket(bytes, reactor.options.PacketLengthSize)
 	if err != nil {
 		conn.Close()
 		pool.PutByte(bytes)
@@ -95,6 +96,7 @@ func (reactor *Reactor) onActive(fd int) {
 
 	// process request
 	reactor.worker.Schedule(func() {
+		// avoid panic and release bytes
 		defer func() {
 			runtime.HandleCrash()
 			pool.PutByte(bytes)
@@ -107,35 +109,24 @@ func (reactor *Reactor) onActive(fd int) {
 	})
 }
 
-// ReactorOptions represents the options for the reactor
-type ReactorOptions struct {
-	// EpollBufferSize is the size of the active connections in every duration
-	EpollBufferSize int
-
-	// WorkerPollSize is the size of the worker pool
-	WorkerPoolSize int
-
-	// PacketLengthSize is the size of the packet length offset
-	PacketLengthSize int
-
-	// ThreadQueueCapacity is the cap of the thread queue
-	ThreadQueueCapacity int
-
-	MaxReadBufferSize int
-}
-
-func NewReactor(options ReactorOptions) (*Reactor, error) {
+// NewMainReactor return a new main reactor instance
+func NewMainReactor(options ReactorOptions) (*MainReactor, error) {
 	poll, err := poller.NewPollerWithBuffer(options.EpollBufferSize)
 	if err != nil {
 		return nil, err
 	}
-	reactor := &Reactor{
-		poll:              poll,
-		engine:            NewEngine(),
-		worker:            pool.NewGoroutinePool(options.WorkerPoolSize),
-		packetLengthSize:  options.PacketLengthSize,
-		maxReadBufferSize: options.MaxReadBufferSize,
-		thread:            NewSubReactor(options.ThreadQueueCapacity),
+
+	reactor := &MainReactor{
+		options: options,
+		poll:    poll,
+		engine:  NewEngine(),
+		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
+	}
+
+	if options.SubReactorShardCount <= 0 {
+		reactor.sub = NewSubReactor(options.ThreadQueueCapacity)
+	} else {
+		reactor.sub = NewShardSubReactor(options.SubReactorShardCount, options.ThreadQueueCapacity)
 	}
 
 	return reactor, nil
