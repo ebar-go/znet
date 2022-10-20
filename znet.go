@@ -6,7 +6,6 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
 	"log"
-	"sync"
 )
 
 // Instance represents an app interface
@@ -15,7 +14,7 @@ type Instance interface {
 	Router() *Router
 
 	// Listen listens for different schema and address
-	Listen(protocol string, addr string) Instance
+	Listen(protocol string, addr string)
 
 	// Run runs the application with the given signal handler
 	Run(stopCh <-chan struct{}) error
@@ -27,13 +26,11 @@ type App struct {
 	schemas []internal.Schema
 	router  *Router
 	reactor *Reactor
-	once    sync.Once
 }
 
 // Listen register different protocols
-func (app *App) Listen(protocol string, addr string) Instance {
+func (app *App) Listen(protocol string, addr string) {
 	app.schemas = append(app.schemas, internal.NewSchema(protocol, addr))
-	return app
 }
 
 // Router return instance of Router
@@ -79,7 +76,7 @@ func (app *App) Run(stopCh <-chan struct{}) error {
 }
 
 func (app *App) shutdown() {
-	log.Println("application shutdown complete")
+	log.Println("event-loop shutdown complete")
 }
 
 // New returns a new app instance

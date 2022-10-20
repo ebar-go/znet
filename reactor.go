@@ -16,7 +16,7 @@ type Reactor struct {
 	engine   *Engine
 	worker   pool.Worker
 	callback *Callback
-	
+
 	packetLengthSize  int
 	maxReadBufferSize int
 }
