@@ -108,7 +108,7 @@ func NewReactor(options ReactorOptions) (*Reactor, error) {
 	reactor := &Reactor{
 		poll:              poll,
 		engine:            NewEngine(),
-		worker:            pool.NewWorkerPool(options.WorkerPoolSize),
+		worker:            pool.NewGoroutinePool(options.WorkerPoolSize),
 		packetLengthSize:  options.PacketLengthSize,
 		maxReadBufferSize: options.MaxReadBufferSize,
 		thread:            NewSubReactor(options.ThreadQueueCapacity),
