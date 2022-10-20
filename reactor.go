@@ -20,15 +20,13 @@ type Reactor struct {
 
 // Run runs the Reactor with the given signal.
 func (reactor *Reactor) Run(stopCh <-chan struct{}) {
-	ctx := context.Background()
-
-	threadCtx, threadCancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	// cancel context when the given signal is closed
-	defer threadCancel()
+	defer cancel()
 	go func() {
 		runtime.HandleCrash()
 		// start thead polling task with active connection handler
-		reactor.thread.Polling(threadCtx.Done(), reactor.handleActiveConnection)
+		reactor.thread.Polling(ctx.Done(), reactor.handleActiveConnection)
 	}()
 
 	reactor.run(stopCh)
@@ -51,7 +49,6 @@ func (reactor *Reactor) run(stopCh <-chan struct{}) {
 			// push the active connections to queue
 			reactor.thread.Offer(active...)
 		}
-
 	}
 }
 
@@ -63,6 +60,7 @@ func (reactor *Reactor) handleActiveConnection(active int) {
 		return
 	}
 
+	// get bytes from pool, and release after processed
 	bytes := pool.GetByte(reactor.maxReadBufferSize)
 	// read message
 	n, err := conn.ReadPacket(bytes, reactor.packetLengthSize)
@@ -72,14 +70,17 @@ func (reactor *Reactor) handleActiveConnection(active int) {
 		return
 	}
 
-	// prepare Context
-	ctx := reactor.engine.NewContext(conn, bytes[:n])
-
 	// process request
 	reactor.worker.Schedule(func() {
-		reactor.engine.HandleContext(ctx)
+		defer func() {
+			runtime.HandleCrash()
+			pool.PutByte(bytes)
+		}()
+		// prepare Context
+		ctx := reactor.engine.NewContext(conn, bytes[:n])
+		defer reactor.engine.ReleaseContext(ctx)
 
-		pool.PutByte(bytes)
+		reactor.engine.HandleContext(ctx)
 	})
 }
 

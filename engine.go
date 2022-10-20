@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
 )
 
@@ -25,14 +24,11 @@ func (e *Engine) NewContext(conn *Connection, bytes []byte) *Context {
 
 // HandleContext handles context
 func (e *Engine) HandleContext(ctx *Context) {
-	defer func() {
-		runtime.HandleCrash()
-		// release Context
-		e.contextProvider.Release(ctx)
-	}()
-
 	e.invokeContextHandler(ctx, 0)
+}
 
+func (e *Engine) ReleaseContext(ctx *Context) {
+	e.contextProvider.Release(ctx)
 }
 
 // ------------------------private methods------------------------
