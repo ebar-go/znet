@@ -17,10 +17,11 @@ type DefaultCodec struct {
 
 type Option func(options *Options)
 
+// Default returns the default codec implementation,the packet is composed by :
+// |-------------- header ------------- |-------- body --------|
+// |packetLength|operate|contentType|seq|-------- body --------|
+// |     4      |   2   |      2    | 2 |          n           |
 func Default(options ...Option) Codec {
-	// |-------------- header ------------- |-------- body --------|
-	// |packetLength|operate|contentType|seq|-------- body --------|
-	// |     4      |   2   |      2    | 2 |          n           |
 	defaultOptions := &Options{
 		headerSize:       10,
 		packetLengthSize: 4,

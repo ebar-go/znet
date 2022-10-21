@@ -2,7 +2,7 @@ package znet
 
 import (
 	"context"
-	"github.com/ebar-go/znet/internal/codec"
+	"github.com/ebar-go/znet/codec"
 	"log"
 	"math"
 )

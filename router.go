@@ -1,7 +1,7 @@
 package znet
 
 import (
-	"github.com/ebar-go/znet/internal/codec"
+	"github.com/ebar-go/znet/codec"
 	"github.com/pkg/errors"
 	"sync"
 )
