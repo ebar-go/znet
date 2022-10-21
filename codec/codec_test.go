@@ -34,12 +34,13 @@ func TestDefaultCodec_Unpack(t *testing.T) {
 	target := &Packet{Operate: 1, ContentType: ContentTypeJSON, Seq: 1}
 	bytes, _ := codec.Pack(target, map[string]any{"foo": "bar"})
 
-	packet, err := codec.Unpack(bytes)
+	packet := &Packet{}
+	err := codec.Unpack(packet, bytes)
 	assert.Nil(t, err)
 	assert.Equal(t, target.Operate, packet.Operate)
 	assert.Equal(t, target.ContentType, packet.ContentType)
 	assert.Equal(t, target.Seq, packet.Seq)
 
-	_, err = codec.Unpack([]byte("foo"))
+	err = codec.Unpack(packet, []byte("foo"))
 	assert.NotNil(t, err)
 }

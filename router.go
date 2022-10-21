@@ -56,9 +56,10 @@ func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
 }
 
 func (router *Router) unpack(ctx *Context) {
-
+	// TODO: new packet instance from pool, release it after finished
+	packet := &codec.Packet{}
 	// unpack
-	packet, err := router.codec.Unpack(ctx.msg)
+	err := router.codec.Unpack(packet, ctx.msg)
 	if err != nil {
 		router.handleError(ctx, err)
 		ctx.Abort()
