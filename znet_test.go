@@ -2,7 +2,6 @@ package znet
 
 import (
 	"context"
-	"github.com/ebar-go/znet/internal"
 	"github.com/ebar-go/znet/internal/codec"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -12,17 +11,20 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	instance := New(WithConnectCallback(func(conn *Connection) {
-		log.Printf("[%s] connected", conn.ID())
-	}), WithDisconnectCallback(func(conn *Connection) {
-		log.Printf("[%s] disconnected", conn.ID())
-	}))
+	instance := New(func(options *Options) {
+		options.OnConnect = func(conn *Connection) {
+			log.Printf("[%s] connected", conn.ID())
+		}
+		options.OnDisconnect = func(conn *Connection) {
+			log.Printf("[%s] disconnected", conn.ID())
+		}
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	instance.Listen(internal.TCP, ":8081")
-	instance.Listen(internal.WEBSOCKET, ":8082")
+	instance.ListenTCP(":8081")
+	instance.ListenWebsocket(":8082")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
 		return map[string]any{"val": "bar"}, nil

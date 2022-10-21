@@ -23,19 +23,13 @@ import (
 	"github.com/ebar-go/ego/utils/runtime/signal"
 	"github.com/ebar-go/znet/internal"
 	"github.com/ebar-go/znet"
-	"log"
 )
 
 func main() {
-	instance := znet.New(znet.WithConnectCallback(func(conn *znet.Connection) {
-		log.Printf("[%s] connected", conn.ID())
-	}), znet.WithDisconnectCallback(func(conn *znet.Connection) {
-		log.Printf("[%s] disconnected", conn.ID())
-	}))
+	instance := znet.New()
 
-
-	instance.Listen(internal.TCP, ":8081")
-	instance.Listen(internal.WEBSOCKET, ":8082")
+	instance.ListenTCP(":8081")
+	instance.ListenWebsocket(":8082")
 
 	instance.Router().Route(1, func(ctx *znet.Context) (any, error) {
 		return map[string]any{"val": "bar"}, nil

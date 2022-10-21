@@ -87,7 +87,7 @@ func (reactor *MainReactor) onActive(fd int) {
 	// get bytes from pool, and release after processed
 	bytes := pool.GetByte(reactor.options.MaxReadBufferSize)
 	// read message
-	n, err := conn.ReadPacket(bytes, reactor.options.PacketLengthSize)
+	n, err := conn.ReadPacket(bytes, reactor.options.packetLengthSize)
 	if err != nil {
 		conn.Close()
 		pool.PutByte(bytes)
