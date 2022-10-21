@@ -3,9 +3,12 @@ package znet
 import (
 	"context"
 	"github.com/ebar-go/znet/codec"
+	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 	"log"
+	"math/rand"
 	"net"
+	"os"
 	"testing"
 	"time"
 )
@@ -20,7 +23,7 @@ func TestNew(t *testing.T) {
 		}
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
 	instance.ListenTCP(":8081")
@@ -70,4 +73,63 @@ func TestClient(t *testing.T) {
 		}
 	}()
 	<-ctx.Done()
+}
+
+func BenchmarkClient(b *testing.B) {
+	//runtime.SetLimit()
+	opsRate := metrics.NewRegisteredTimer("ops", nil)
+
+	ch := make(chan net.Conn, 50)
+	n := 10000
+	ctx, cancel := context.WithCancel(context.Background())
+	for i := 0; i < 10; i++ {
+		go func(ctx context.Context) {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					c, err := net.DialTimeout("tcp", ":8081", 10*time.Second)
+					if err == nil {
+						ch <- c
+					}
+				}
+			}
+
+		}(ctx)
+	}
+	connections := make([]net.Conn, 0, 1024)
+	for len(connections) < n {
+		connections = append(connections, <-ch)
+	}
+	cancel()
+
+	go func() {
+		metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+	}()
+
+	packet := &codec.Packet{Operate: 1, ContentType: codec.ContentTypeJSON}
+	bytes, err := codec.Default().Pack(packet, map[string]any{"key": "foo"})
+	if err != nil {
+		return
+	}
+
+	b.ResetTimer()
+	for i := 0; i < 100; i++ {
+		go func() {
+			for {
+				n := rand.Intn(len(connections) - 1)
+				c := connections[n]
+				before := time.Now()
+				if _, err := c.Write(bytes); err != nil {
+					_ = c.Close()
+					log.Println(err)
+				} else {
+					opsRate.Update(time.Now().Sub(before))
+				}
+			}
+
+		}()
+	}
+	select {}
 }
