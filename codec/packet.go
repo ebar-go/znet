@@ -18,33 +18,41 @@ const (
 	ContentTypeProtobuf = 2
 )
 
-const (
-	EndianTypeBig    = "big"
-	EndianTypeLittle = "little"
-)
-
-func (packet Packet) Marshal(data any) ([]byte, error) {
+// Marshal marshals the given data into body by content type
+func (packet *Packet) Marshal(data any) ([]byte, error) {
 	if packet.ContentType == ContentTypeJSON {
 		return json.Marshal(data)
+	} else if packet.ContentType == ContentTypeProtobuf {
+		message, ok := data.(proto.Message)
+		if !ok {
+			return nil, errors.New("unsupported proto object")
+		}
+
+		return proto.Marshal(message)
 	}
 
-	message, ok := data.(proto.Message)
-	if !ok {
-		return nil, errors.New("unsupported proto object")
-	}
-
-	return proto.Marshal(message)
+	return nil, errors.New("unsupported content type")
 }
 
-func (packet Packet) Unmarshal(data any) error {
+// Unmarshal parses the body by content type and stores the result
+func (packet *Packet) Unmarshal(data any) error {
 	if packet.ContentType == ContentTypeJSON {
 		return json.Unmarshal(packet.Body, data)
+	} else if packet.ContentType == ContentTypeProtobuf {
+		message, ok := data.(proto.Message)
+		if !ok {
+			return errors.New("unsupported proto object")
+		}
+
+		return proto.Unmarshal(packet.Body, message)
 	}
 
-	message, ok := data.(proto.Message)
-	if !ok {
-		return errors.New("unsupported proto object")
-	}
+	return errors.New("unsupported content type")
+}
 
-	return proto.Unmarshal(packet.Body, message)
+func (packet *Packet) Reset() {
+	packet.Operate = 0
+	packet.ContentType = ContentTypeJSON
+	packet.Seq = 0
+	packet.Body = nil
 }

@@ -2,6 +2,7 @@ package znet
 
 import (
 	"github.com/ebar-go/znet/codec"
+	"github.com/ebar-go/znet/internal"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -27,6 +28,7 @@ type Router struct {
 	errorHandler    func(ctx *Context, err error)
 	notFoundHandler HandleFunc
 	requestHandler  HandleFunc
+	packetProvider  internal.Provider[*codec.Packet]
 }
 
 // WithCodec is allowed to be used with the given codec, default is codec.DefaultCodec
@@ -56,8 +58,11 @@ func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
 }
 
 func (router *Router) unpack(ctx *Context) {
-	// TODO: new packet instance from pool, release it after finished
-	packet := &codec.Packet{}
+	// new packet instance from pool, release it after finished
+	packet := router.packetProvider.Acquire()
+	defer router.packetProvider.Release(packet)
+	packet.Reset()
+
 	// unpack
 	err := router.codec.Unpack(packet, ctx.msg)
 	if err != nil {
@@ -119,5 +124,8 @@ func NewRouter() *Router {
 		codec:           codec.Default(),
 		errorHandler:    nil,
 		notFoundHandler: nil,
+		packetProvider: internal.NewSyncPoolProvider[*codec.Packet](func() interface{} {
+			return &codec.Packet{}
+		}),
 	}
 }

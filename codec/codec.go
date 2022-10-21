@@ -5,9 +5,25 @@ import (
 	"github.com/ebar-go/ego/utils/binary"
 )
 
+// Codec represents a interface that pack/unpack source message
 type Codec interface {
+	// Pack encode source message by *Packet object
 	Pack(packet *Packet, data any) ([]byte, error)
+
+	// Unpack decode source message into *Packet object
 	Unpack(packet *Packet, msg []byte) error
+}
+
+// Options represents codec options
+type Options struct {
+	// ContentType is data content type
+	ContentType int
+
+	headerSize, headerOffset             int
+	packetLengthSize, packetLengthOffset int
+	operateSize, operateOffset           int
+	contentTypeSize, contentTypeOffset   int
+	seqSize, seqOffset                   int
 }
 
 type DefaultCodec struct {
@@ -41,16 +57,6 @@ func Default(opts ...Option) Codec {
 	options.seqOffset = options.contentTypeOffset + options.seqSize
 
 	return DefaultCodec{options: options, endian: binary.BigEndian()}
-}
-
-type Options struct {
-	ContentType int
-
-	headerSize, headerOffset             int
-	packetLengthSize, packetLengthOffset int
-	operateSize, operateOffset           int
-	contentTypeSize, contentTypeOffset   int
-	seqSize, seqOffset                   int
 }
 
 func (codec DefaultCodec) Pack(packet *Packet, data any) ([]byte, error) {
