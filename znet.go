@@ -46,8 +46,11 @@ func (el *EventLoop) Router() *Router {
 	return el.router
 }
 
-// Run starts the el
+// Run starts the event-loop
 func (el *EventLoop) Run(stopCh <-chan struct{}) error {
+	if err := el.options.Validate(); err != nil {
+		return err
+	}
 	ctx := context.Background()
 	if len(el.schemas) == 0 {
 		return errors.New("empty listen target")
@@ -66,17 +69,17 @@ func (el *EventLoop) Run(stopCh <-chan struct{}) error {
 		log.Printf("start listener: %v\n", schema)
 	}
 
-	// prepare el
+	// prepare handler func
 	el.main.engine.Use(el.router.unpack)
 	el.main.engine.Use(el.options.Middlewares...)
 	el.main.engine.Use(el.router.handleRequest)
 
-	elCtx, elCancel := context.WithCancel(ctx)
-	// cancel el context when el is stopped
-	defer elCancel()
+	reactorCtx, reactorCancel := context.WithCancel(ctx)
+	// cancel reactor context when event-loop is stopped
+	defer reactorCancel()
 	go func() {
 		defer runtime.HandleCrash()
-		el.main.Run(elCtx.Done())
+		el.main.Run(reactorCtx.Done())
 	}()
 
 	runtime.WaitClose(stopCh, el.shutdown)

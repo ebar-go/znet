@@ -21,7 +21,6 @@ package main
 
 import (
 	"github.com/ebar-go/ego/utils/runtime/signal"
-	"github.com/ebar-go/znet/internal"
 	"github.com/ebar-go/znet"
 )
 
@@ -109,3 +108,5 @@ func main() {
 |packetLength|operate|contentType|seq|-------- body --------|
 |     4      |   2   |      2    | 2 |          n           |
 ```
+
+## Benchmark
