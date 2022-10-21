@@ -18,6 +18,11 @@ const (
 	ContentTypeProtobuf = 2
 )
 
+const (
+	EndianTypeBig    = "big"
+	EndianTypeLittle = "little"
+)
+
 func (packet Packet) Marshal(data any) ([]byte, error) {
 	if packet.ContentType == ContentTypeJSON {
 		return json.Marshal(data)

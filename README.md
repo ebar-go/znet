@@ -6,6 +6,7 @@ golang powerful network framework
 - Supporting multiple protocols: TCP,Websocket
 - Supporting two event-notification mechanisms: epoll in Linux/Windows and kqueue in FreeBSD
 - Supporting safe goroutines worker pool
+- Supporting two contentType: JSON/Protobuf 
 
 ## Quick start
 - install
@@ -102,7 +103,7 @@ func main() {
 ```
 
 ## Protocol
-
+- We design the protocol for solve TCP sticky packet problem
 ```
 |-------------- header ------------- |-------- body --------|
 |packetLength|operate|contentType|seq|-------- body --------|

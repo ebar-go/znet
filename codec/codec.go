@@ -23,6 +23,7 @@ type Option func(options *Options)
 // |     4      |   2   |      2    | 2 |          n           |
 func Default(options ...Option) Codec {
 	defaultOptions := &Options{
+		ContentType:      ContentTypeJSON,
 		headerSize:       10,
 		packetLengthSize: 4,
 		operateSize:      2,
@@ -36,6 +37,9 @@ func Default(options ...Option) Codec {
 }
 
 type Options struct {
+	ContentType int
+	EndianType  string
+
 	headerSize       int
 	packetLengthSize int
 	operateSize      int
