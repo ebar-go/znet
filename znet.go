@@ -16,7 +16,7 @@ type Instance interface {
 	// Listen listens for different schema and address
 	Listen(protocol string, addr string)
 
-	// Run runs the reactorlication with the given signal handler
+	// Run runs the instance with the given signal handler
 	Run(stopCh <-chan struct{}) error
 }
 

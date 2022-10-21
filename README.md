@@ -24,6 +24,7 @@ import (
 	"github.com/ebar-go/znet/internal"
 	"github.com/ebar-go/znet"
 	"log"
+)
 
 func main() {
 	instance := znet.New(znet.WithConnectCallback(func(conn *znet.Connection) {
@@ -43,4 +44,10 @@ func main() {
 }
 ```
 
-## 
+## Protocol
+
+```
+|-------------- header ------------- |-------- body --------|
+|packetLength|operate|contentType|seq|-------- body --------|
+|     4      |   2   |      2    | 2 |          n           |
+```
