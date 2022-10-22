@@ -19,9 +19,10 @@ type Context struct {
 	index int8
 	msg   []byte
 
-	thread  *Thread
-	conn    *Connection
-	request *codec.Packet
+	thread   *Thread
+	conn     *Connection
+	request  *codec.Packet
+	response any
 
 	context.Context
 }
@@ -56,4 +57,5 @@ func (ctx *Context) reset(conn *Connection, msg []byte) {
 	ctx.msg = msg
 	ctx.conn = conn
 	ctx.Context = context.Background()
+	ctx.response = nil
 }
