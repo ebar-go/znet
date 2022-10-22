@@ -20,7 +20,7 @@ func StandardHandler[Request, Response any](action func(ctx *Context, request *R
 	}
 }
 
-// Router
+// Router represents router instance
 type Router struct {
 	rwm             sync.RWMutex
 	handlers        map[int16]Handler
@@ -32,9 +32,9 @@ type Router struct {
 }
 
 // WithCodec is allowed to be used with the given codec, default is codec.DefaultCodec
-func (route *Router) WithCodec(codec codec.Codec) *Router {
-	route.codec = codec
-	return route
+func (router *Router) WithCodec(codec codec.Codec) *Router {
+	router.codec = codec
+	return router
 }
 
 // Route register handler for operate

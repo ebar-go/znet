@@ -1,6 +1,8 @@
 package znet
 
 import (
+	"errors"
+	"github.com/ebar-go/ego/utils/binary"
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
@@ -27,8 +29,8 @@ func (e *Thread) Use(handler ...HandleFunc) {
 func (e *Thread) HandleRequest(conn *Connection) {
 	// get bytes from pool, and release after processed
 	bytes := pool.GetByte(e.options.MaxReadBufferSize)
-	// read message
-	n, err := conn.ReadPacket(bytes, e.options.packetLengthSize)
+
+	n, err := e.read(conn, bytes)
 	if err != nil {
 		conn.Close()
 		pool.PutByte(bytes)
@@ -54,6 +56,26 @@ func (e *Thread) HandleRequest(conn *Connection) {
 }
 
 // ------------------------private methods------------------------
+
+func (e *Thread) read(conn *Connection, bytes []byte) (n int, err error) {
+	// read message
+	if e.options.packetLengthSize == 0 {
+		return conn.Read(bytes)
+	}
+
+	n, err = conn.Read(bytes[:e.options.packetLengthSize])
+	if err != nil {
+		return
+	}
+	packetLength := int(binary.BigEndian().Int32(bytes[:e.options.packetLengthSize]))
+	if packetLength > len(bytes) {
+		err = errors.New("packet exceeded")
+		return
+	}
+	_, err = conn.Read(bytes[e.options.packetLengthSize:packetLength])
+	n = packetLength
+	return
+}
 
 // invokeContextHandler invoke context handler chain
 func (e *Thread) invokeContextHandler(ctx *Context, index int8) {

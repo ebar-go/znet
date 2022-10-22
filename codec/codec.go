@@ -12,6 +12,7 @@ type Codec interface {
 
 	// Unpack decode source message into *Packet object
 	Unpack(packet *Packet, msg []byte) error
+	UnpackHeader(buf []byte) (length int)
 }
 
 // Options represents codec options
@@ -26,6 +27,17 @@ type Options struct {
 	seqSize, seqOffset                   int
 }
 
+func defaultOptions() *Options {
+	return &Options{
+		ContentType:      ContentTypeJSON,
+		headerSize:       10,
+		packetLengthSize: 4,
+		operateSize:      2,
+		contentTypeSize:  2,
+		seqSize:          2,
+	}
+}
+
 type DefaultCodec struct {
 	options *Options
 	endian  binary.Endian
@@ -38,14 +50,7 @@ type Option func(options *Options)
 // |packetLength|operate|contentType|seq|-------- body --------|
 // |     4      |   2   |      2    | 2 |          n           |
 func Default(opts ...Option) Codec {
-	options := &Options{
-		ContentType:      ContentTypeJSON,
-		headerSize:       10,
-		packetLengthSize: 4,
-		operateSize:      2,
-		contentTypeSize:  2,
-		seqSize:          2,
-	}
+	options := defaultOptions()
 	for _, setter := range opts {
 		setter(options)
 	}
@@ -96,4 +101,11 @@ func (codec DefaultCodec) Unpack(packet *Packet, msg []byte) error {
 	}
 
 	return nil
+}
+
+func (codec DefaultCodec) UnpackHeader(buf []byte) (length int) {
+	offset := codec.options.packetLengthOffset
+	length = int(codec.endian.Int32(buf[:offset]))
+	return
+
 }
