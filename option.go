@@ -58,8 +58,8 @@ func (options *Options) Validate() error {
 		return errors.New("Reactor.WorkerPoolSize must be greater than zero")
 	}
 
-	if options.Reactor.MaxReadBufferSize <= 128 {
-		return errors.New("Reactor.MaxReadBufferSize must be greater than 128")
+	if options.Reactor.MaxReadBufferSize <= 0 {
+		return errors.New("Reactor.MaxReadBufferSize must be greater than 0")
 	}
 
 	if options.Reactor.ThreadQueueCapacity <= 0 {
@@ -76,13 +76,17 @@ func defaultOptions() *Options {
 		Debug:        false,
 		OnConnect:    func(conn *Connection) {},
 		OnDisconnect: func(conn *Connection) {},
-		Reactor: ReactorOptions{
-			EpollBufferSize:      256,
-			WorkerPoolSize:       1000,
-			ThreadQueueCapacity:  100,
-			MaxReadBufferSize:    512,
-			SubReactorShardCount: 32,
-			packetLengthSize:     4,
-		},
+		Reactor:      defaultReactorOptions(),
+	}
+}
+
+func defaultReactorOptions() ReactorOptions {
+	return ReactorOptions{
+		EpollBufferSize:      256,
+		WorkerPoolSize:       1000,
+		ThreadQueueCapacity:  100,
+		MaxReadBufferSize:    512,
+		SubReactorShardCount: 32,
+		packetLengthSize:     4,
 	}
 }

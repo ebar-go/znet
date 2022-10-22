@@ -7,18 +7,18 @@ import (
 	"time"
 )
 
-func TestNewSubReactor(t *testing.T) {
-	sub := NewSubReactor(1024)
+func TestNewSingleSubReactor(t *testing.T) {
+	sub := NewSingleSubReactor(1024)
 	assert.NotNil(t, sub)
 }
 
 func TestSubReactor_GetConnection(t *testing.T) {
-	sub := NewSubReactor(1024)
+	sub := NewSingleSubReactor(1024)
 	assert.Nil(t, sub.GetConnection(1))
 }
 
 func TestSubReactor_RegisterConnection(t *testing.T) {
-	sub := NewSubReactor(1024)
+	sub := NewSingleSubReactor(1024)
 
 	fd := 1
 	assert.Nil(t, sub.GetConnection(fd))
@@ -30,7 +30,7 @@ func TestSubReactor_RegisterConnection(t *testing.T) {
 }
 
 func TestSubReactor_UnregisterConnection(t *testing.T) {
-	sub := NewSubReactor(1024)
+	sub := NewSingleSubReactor(1024)
 	fd := 1
 	sub.RegisterConnection(&Connection{fd: fd})
 
@@ -44,7 +44,7 @@ func TestSubReactor_UnregisterConnection(t *testing.T) {
 }
 
 func TestSubReactor_OfferAndPolling(t *testing.T) {
-	sub := NewSubReactor(1024)
+	sub := NewSingleSubReactor(1024)
 
 	stop := make(chan struct{})
 	go sub.Polling(stop, func(active int) {
