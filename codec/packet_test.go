@@ -2,7 +2,9 @@ package codec
 
 import (
 	"github.com/stretchr/testify/assert"
+	"log"
 	"testing"
+	"time"
 )
 
 func TestPacket_Unmarshal(t *testing.T) {
@@ -81,4 +83,13 @@ func TestPacket_Marshal(t *testing.T) {
 			//assert.Equalf(t, tt.want, got, "Marshal(%v)", tt.args.data)
 		})
 	}
+}
+
+func TestBytes(t *testing.T) {
+	buf := []byte("hello world")
+	log.Printf("%p", buf)
+	go func(a []byte) {
+		log.Printf("%p", a)
+	}(buf)
+	time.Sleep(time.Second)
 }

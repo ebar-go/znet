@@ -101,11 +101,8 @@ func (reactor *MainReactor) onActive(fd int) {
 			runtime.HandleCrash()
 			pool.PutByte(bytes)
 		}()
-		// prepare Context
-		ctx := reactor.engine.NewContext(conn, bytes[:n])
-		defer reactor.engine.ReleaseContext(ctx)
-
-		reactor.engine.HandleContext(ctx)
+		// handle request
+		reactor.engine.HandleRequest(conn, bytes[:n])
 	})
 }
 

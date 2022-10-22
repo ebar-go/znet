@@ -85,15 +85,17 @@ func main() {
 		for {
 			select {
 			case <-ctx.Done():
+				return
 			default:
-				packet := &codec.Packet{Operate: OperateFoo, ContentType: codec.ContentTypeJSON}
-				bytes, err := codec.Default().Pack(packet, map[string]any{"key": "foo"})
-				if err != nil {
-					return
-				}
-				conn.Write(bytes)
-				time.Sleep(time.Second)
+				
 			}
+			packet := &codec.Packet{Operate: OperateFoo, ContentType: codec.ContentTypeJSON}
+			bytes, err := codec.Default().Pack(packet, map[string]any{"key": "foo"})
+			if err != nil {
+				return
+			}
+			conn.Write(bytes)
+			time.Sleep(time.Second)
 
 		}
 	}()
@@ -111,3 +113,11 @@ func main() {
 ```
 
 ## Benchmark
+```
+goos: windows
+goarch: amd64
+pkg: github.com/ebar-go/znet
+cpu: AMD Ryzen 7 3700U with Radeon Vega Mobile Gfx
+
+
+```

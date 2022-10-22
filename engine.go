@@ -6,7 +6,10 @@ import (
 
 // Engine represents context manager
 type Engine struct {
-	handleChains    []HandleFunc
+	// handlerChains is a list of handlers
+	handleChains []HandleFunc
+
+	// contextProvider is a provider for context
 	contextProvider internal.Provider[*Context]
 }
 
@@ -15,23 +18,30 @@ func (e *Engine) Use(handler ...HandleFunc) {
 	e.handleChains = append(e.handleChains, handler...)
 }
 
+// HandleRequest handles context
+func (e *Engine) HandleRequest(conn *Connection, msg []byte) {
+	ctx := e.newContext(conn, msg)
+	defer e.releaseContext(ctx)
+
+	e.invokeContextHandler(ctx, 0)
+}
+
+// ------------------------private methods------------------------
+
 // NewContext return a new Context instance
-func (e *Engine) NewContext(conn *Connection, bytes []byte) *Context {
+func (e *Engine) newContext(conn *Connection, bytes []byte) *Context {
+	// acquire context from provider
 	ctx := e.contextProvider.Acquire()
+
+	// reset stateful properties
 	ctx.reset(conn, bytes)
 	return ctx
 }
 
-// HandleContext handles context
-func (e *Engine) HandleContext(ctx *Context) {
-	e.invokeContextHandler(ctx, 0)
-}
-
-func (e *Engine) ReleaseContext(ctx *Context) {
+// ReleaseContext releases context
+func (e *Engine) releaseContext(ctx *Context) {
 	e.contextProvider.Release(ctx)
 }
-
-// ------------------------private methods------------------------
 
 // invokeContextHandler invoke context handler chain
 func (e *Engine) invokeContextHandler(ctx *Context, index int8) {
@@ -41,6 +51,7 @@ func (e *Engine) invokeContextHandler(ctx *Context, index int8) {
 	e.handleChains[index](ctx)
 }
 
+// NewEngine returns a new Engine instance
 func NewEngine() *Engine {
 	engine := &Engine{}
 	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {

@@ -2,6 +2,7 @@ package znet
 
 import (
 	"context"
+	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
@@ -14,13 +15,16 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	go func() {
+		runtime.ShowMemoryUsage()
+	}()
 	instance := New(func(options *Options) {
-		options.OnConnect = func(conn *Connection) {
-			log.Printf("[%s] connected", conn.ID())
-		}
-		options.OnDisconnect = func(conn *Connection) {
-			log.Printf("[%s] disconnected", conn.ID())
-		}
+		//options.OnConnect = func(conn *Connection) {
+		//	log.Printf("[%s] connected", conn.ID())
+		//}
+		//options.OnDisconnect = func(conn *Connection) {
+		//	log.Printf("[%s] disconnected", conn.ID())
+		//}
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
@@ -79,10 +83,10 @@ func BenchmarkClient(b *testing.B) {
 	//runtime.SetLimit()
 	opsRate := metrics.NewRegisteredTimer("ops", nil)
 
-	ch := make(chan net.Conn, 50)
+	ch := make(chan net.Conn, 200)
 	n := 10000
 	ctx, cancel := context.WithCancel(context.Background())
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		go func(ctx context.Context) {
 			for {
 				select {
@@ -98,7 +102,19 @@ func BenchmarkClient(b *testing.B) {
 
 		}(ctx)
 	}
-	connections := make([]net.Conn, 0, 1024)
+	connections := make([]net.Conn, 0, n)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+
+			}
+			time.Sleep(time.Second * 5)
+			log.Println("connected:", len(connections))
+		}
+	}()
 	for len(connections) < n {
 		connections = append(connections, <-ch)
 	}
