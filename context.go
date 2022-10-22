@@ -11,7 +11,7 @@ const (
 	maxIndex = math.MaxInt8 / 2
 )
 
-// HandlerFunc represents a handler function for Context
+// HandleFunc represents a handler function for Context
 type HandleFunc func(ctx *Context)
 
 // Context represents a context for request
@@ -19,8 +19,9 @@ type Context struct {
 	index int8
 	msg   []byte
 
-	thread   *Thread
-	conn     *Connection
+	thread *Thread
+	conn   *Connection
+
 	request  *codec.Packet
 	response any
 

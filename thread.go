@@ -21,6 +21,7 @@ type Thread struct {
 	worker         pool.Worker
 	codec          codec.Codec
 	packetProvider internal.Provider[*codec.Packet]
+	endian         binary.Endian
 }
 
 // Use registers middleware
@@ -67,7 +68,7 @@ func (e *Thread) read(conn *Connection, bytes []byte) (n int, err error) {
 	if err != nil {
 		return
 	}
-	packetLength := int(binary.BigEndian().Int32(bytes[:e.options.packetLengthSize]))
+	packetLength := int(e.endian.Int32(bytes[:e.options.packetLengthSize]))
 	if packetLength > len(bytes) {
 		err = errors.New("packet exceeded")
 		return
@@ -131,6 +132,7 @@ func NewThread(options ThreadOptions) *Thread {
 		packetProvider: internal.NewSyncPoolProvider[*codec.Packet](func() interface{} {
 			return &codec.Packet{}
 		}),
+		endian: binary.BigEndian(),
 	}
 
 	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {

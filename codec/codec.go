@@ -5,14 +5,13 @@ import (
 	"github.com/ebar-go/ego/utils/binary"
 )
 
-// Codec represents a interface that pack/unpack source message
+// Codec represents an interface that pack/unpack source message
 type Codec interface {
 	// Pack encode source message by *Packet object
 	Pack(packet *Packet, data any) ([]byte, error)
 
 	// Unpack decode source message into *Packet object
 	Unpack(packet *Packet, msg []byte) error
-	UnpackHeader(buf []byte) (length int)
 }
 
 // Options represents codec options
@@ -101,11 +100,4 @@ func (codec DefaultCodec) Unpack(packet *Packet, msg []byte) error {
 	}
 
 	return nil
-}
-
-func (codec DefaultCodec) UnpackHeader(buf []byte) (length int) {
-	offset := codec.options.packetLengthOffset
-	length = int(codec.endian.Int32(buf[:offset]))
-	return
-
 }
