@@ -9,16 +9,22 @@ import (
 	"net"
 )
 
-// MainReactor represents the epoll model for processing action connections.
+// MainReactor represents the epoll model for listen connections.
 type MainReactor struct {
 	options ReactorOptions
 	// poll use to listen active connections
 	poll poller.Poller
 
-	//
-	sub      SubReactorInstance
-	engine   *Engine
-	worker   pool.Worker
+	// sub manage connections
+	sub SubReactor
+
+	// engine handle requests
+	engine *Engine
+
+	// worker work for active connections
+	worker pool.Worker
+
+	// callback manage connections events
 	callback *Callback
 }
 
@@ -29,7 +35,7 @@ func (reactor *MainReactor) Run(stopCh <-chan struct{}) {
 	defer cancel()
 	go func() {
 		runtime.HandleCrash()
-		// start thead polling task with active connection handler
+		// start sub reactor polling task with active connection handler
 		reactor.sub.Polling(ctx.Done(), reactor.onActive)
 	}()
 
@@ -120,8 +126,9 @@ func NewMainReactor(options ReactorOptions) (*MainReactor, error) {
 		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
 	}
 
+	// choose sub reactor implements by shard count
 	if options.SubReactorShardCount <= 0 {
-		reactor.sub = NewSubReactor(options.ThreadQueueCapacity)
+		reactor.sub = NewSingleSubReactor(options.ThreadQueueCapacity)
 	} else {
 		reactor.sub = NewShardSubReactor(options.SubReactorShardCount, options.ThreadQueueCapacity)
 	}

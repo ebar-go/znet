@@ -5,7 +5,7 @@ import (
 	"github.com/ebar-go/znet/internal"
 )
 
-type SubReactorInstance interface {
+type SubReactor interface {
 	RegisterConnection(conn *Connection)
 	UnregisterConnection(conn *Connection)
 	GetConnection(fd int) *Connection
@@ -13,8 +13,8 @@ type SubReactorInstance interface {
 	Polling(stopCh <-chan struct{}, handler func(active int))
 }
 
-// SubReactor represents sub reactor
-type SubReactor struct {
+// SingleSubReactor represents sub reactor
+type SingleSubReactor struct {
 	// buffer manage active file descriptors
 	buffer *internal.Buffer[int]
 
@@ -23,41 +23,41 @@ type SubReactor struct {
 }
 
 // RegisterConnection registers a new connection to the epoll listener
-func (sub *SubReactor) RegisterConnection(conn *Connection) {
+func (sub *SingleSubReactor) RegisterConnection(conn *Connection) {
 	sub.container.Set(conn.fd, conn)
 }
 
 // UnregisterConnection removes the connection from the epoll listener
-func (sub *SubReactor) UnregisterConnection(conn *Connection) {
+func (sub *SingleSubReactor) UnregisterConnection(conn *Connection) {
 	sub.container.Del(conn.fd)
 }
 
 // GetConnection returns a connection by fd
-func (sub *SubReactor) GetConnection(fd int) *Connection {
+func (sub *SingleSubReactor) GetConnection(fd int) *Connection {
 	conn, _ := sub.container.Get(fd)
 	return conn
 }
 
 // Offer push the active connections fd to the queue
-func (sub *SubReactor) Offer(fds ...int) {
+func (sub *SingleSubReactor) Offer(fds ...int) {
 	sub.buffer.Offer(fds...)
 }
 
 // Polling poll with callback function
-func (sub *SubReactor) Polling(stopCh <-chan struct{}, handler func(active int)) {
+func (sub *SingleSubReactor) Polling(stopCh <-chan struct{}, handler func(active int)) {
 	sub.buffer.Polling(stopCh, handler)
 }
 
-// NewSubReactor creates a instance of a SubReactor
-func NewSubReactor(bufferSize int) *SubReactor {
-	return &SubReactor{
+// NewSingleSubReactor creates a instance of a SingleSubReactor
+func NewSingleSubReactor(bufferSize int) *SingleSubReactor {
+	return &SingleSubReactor{
 		buffer:    internal.NewBuffer[int](bufferSize),
 		container: internal.NewContainer[int, *Connection](),
 	}
 }
 
 type ShardSubReactor struct {
-	container internal.ShardContainer[*SubReactor]
+	container internal.ShardContainer[*SingleSubReactor]
 }
 
 func (shard *ShardSubReactor) RegisterConnection(conn *Connection) {
@@ -79,7 +79,7 @@ func (shard *ShardSubReactor) Offer(fds ...int) {
 }
 
 func (shard *ShardSubReactor) Polling(stopCh <-chan struct{}, handler func(active int)) {
-	shard.container.Iterator(func(sub *SubReactor) {
+	shard.container.Iterator(func(sub *SingleSubReactor) {
 		go func() {
 			defer runtime.HandleCrash()
 			sub.Polling(stopCh, handler)
@@ -89,8 +89,8 @@ func (shard *ShardSubReactor) Polling(stopCh <-chan struct{}, handler func(activ
 
 func NewShardSubReactor(shardCount, bufferSize int) *ShardSubReactor {
 	return &ShardSubReactor{
-		container: internal.NewShardContainer[*SubReactor](shardCount, func() *SubReactor {
-			return NewSubReactor(bufferSize)
+		container: internal.NewShardContainer[*SingleSubReactor](shardCount, func() *SingleSubReactor {
+			return NewSingleSubReactor(bufferSize)
 		}),
 	}
 }
