@@ -29,6 +29,7 @@ type EventLoop struct {
 	schemas []internal.Schema
 	router  *Router
 	main    *MainReactor
+	thread  *Thread
 }
 
 // ListenTCP listens for tcp connections
@@ -70,16 +71,16 @@ func (el *EventLoop) Run(stopCh <-chan struct{}) error {
 	}
 
 	// prepare handler func
-	el.main.engine.Use(el.router.unpack)
-	el.main.engine.Use(el.options.Middlewares...)
-	el.main.engine.Use(el.router.handleRequest)
+	el.thread.Use(el.router.unpack)
+	el.thread.Use(el.options.Middlewares...)
+	el.thread.Use(el.router.handleRequest)
 
 	reactorCtx, reactorCancel := context.WithCancel(ctx)
 	// cancel reactor context when event-loop is stopped
 	defer reactorCancel()
 	go func() {
 		defer runtime.HandleCrash()
-		el.main.Run(reactorCtx.Done())
+		el.main.Run(reactorCtx.Done(), el.thread.HandleRequest)
 	}()
 
 	runtime.WaitClose(stopCh, el.shutdown)
@@ -100,6 +101,7 @@ func New(opts ...Option) Instance {
 	return &EventLoop{
 		options: options,
 		main:    options.NewMainReactor(),
-		router:  NewRouter(),
+		router:  options.NewRouter(),
+		thread:  options.NewThread(),
 	}
 }

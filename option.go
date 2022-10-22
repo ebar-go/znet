@@ -16,6 +16,17 @@ type Options struct {
 	Middlewares []HandleFunc
 
 	Reactor ReactorOptions
+
+	Thread ThreadOptions
+}
+
+type ThreadOptions struct {
+	// WorkerPollSize is the size of the worker pool, default is 1000
+	WorkerPoolSize int
+	// MaxReadBufferSize is the size of the max read buffer, default is 512
+	MaxReadBufferSize int
+
+	packetLengthSize int
 }
 
 // ReactorOptions represents the options for the reactor
@@ -23,20 +34,12 @@ type ReactorOptions struct {
 	// EpollBufferSize is the size of the active connections in every duration,default is 100
 	EpollBufferSize int
 
-	// WorkerPollSize is the size of the worker pool, default is 1000
-	WorkerPoolSize int
-
 	// ThreadQueueCapacity is the cap of the thread queue, default is 100
 	ThreadQueueCapacity int
-
-	// MaxReadBufferSize is the size of the max read buffer, default is 512
-	MaxReadBufferSize int
 
 	// SubReactorShardCount is the number of sub-reactor shards, default is 32
 	// if the parameter is zero, the number of sub-reactor will be 1
 	SubReactorShardCount int
-
-	packetLengthSize int
 }
 
 func (options *Options) NewMainReactor() *MainReactor {
@@ -48,18 +51,26 @@ func (options *Options) NewMainReactor() *MainReactor {
 	return reactor
 }
 
+func (options *Options) NewThread() *Thread {
+	return NewThread(options.Thread)
+}
+
+func (options *Options) NewRouter() *Router {
+	return NewRouter()
+}
+
 // Validate validates the options parameter
 func (options *Options) Validate() error {
 	if options.Reactor.EpollBufferSize <= 0 {
 		return errors.New("Reactor.EpollBufferSize must be greater than zero")
 	}
 
-	if options.Reactor.WorkerPoolSize <= 0 {
-		return errors.New("Reactor.WorkerPoolSize must be greater than zero")
+	if options.Thread.WorkerPoolSize <= 0 {
+		return errors.New("Thread.WorkerPoolSize must be greater than zero")
 	}
 
-	if options.Reactor.MaxReadBufferSize <= 0 {
-		return errors.New("Reactor.MaxReadBufferSize must be greater than 0")
+	if options.Thread.MaxReadBufferSize <= 0 {
+		return errors.New("Thread.MaxReadBufferSize must be greater than 0")
 	}
 
 	if options.Reactor.ThreadQueueCapacity <= 0 {
@@ -77,16 +88,22 @@ func defaultOptions() *Options {
 		OnConnect:    func(conn *Connection) {},
 		OnDisconnect: func(conn *Connection) {},
 		Reactor:      defaultReactorOptions(),
+		Thread:       defaultThreadOptions(),
 	}
 }
 
 func defaultReactorOptions() ReactorOptions {
 	return ReactorOptions{
 		EpollBufferSize:      256,
-		WorkerPoolSize:       1000,
 		ThreadQueueCapacity:  100,
-		MaxReadBufferSize:    512,
 		SubReactorShardCount: 32,
-		packetLengthSize:     4,
+	}
+}
+
+func defaultThreadOptions() ThreadOptions {
+	return ThreadOptions{
+		MaxReadBufferSize: 512,
+		WorkerPoolSize:    1000,
+		packetLengthSize:  4,
 	}
 }

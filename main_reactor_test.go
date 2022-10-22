@@ -18,5 +18,7 @@ func TestMainReactor_Run(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	reactor.Run(signal.SetupSignalHandler())
+	reactor.Run(signal.SetupSignalHandler(), func(conn *Connection) {
+
+	})
 }

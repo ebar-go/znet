@@ -19,7 +19,7 @@ type Context struct {
 	index int8
 	msg   []byte
 
-	engine  *Engine
+	thread  *Thread
 	conn    *Connection
 	request *codec.Packet
 
@@ -40,7 +40,7 @@ func (ctx *Context) Conn() *Connection {
 func (ctx *Context) Next() {
 	if ctx.index < maxIndex {
 		ctx.index++
-		ctx.engine.invokeContextHandler(ctx, ctx.index)
+		ctx.thread.invokeContextHandler(ctx, ctx.index)
 	}
 }
 

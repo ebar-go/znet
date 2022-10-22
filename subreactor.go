@@ -10,7 +10,7 @@ type SubReactor interface {
 	UnregisterConnection(conn *Connection)
 	GetConnection(fd int) *Connection
 	Offer(fds ...int)
-	Polling(stopCh <-chan struct{}, handler func(active int))
+	Polling(stopCh <-chan struct{}, handler ConnectionHandler)
 }
 
 // SingleSubReactor represents sub reactor
@@ -44,11 +44,17 @@ func (sub *SingleSubReactor) Offer(fds ...int) {
 }
 
 // Polling poll with callback function
-func (sub *SingleSubReactor) Polling(stopCh <-chan struct{}, handler func(active int)) {
-	sub.buffer.Polling(stopCh, handler)
+func (sub *SingleSubReactor) Polling(stopCh <-chan struct{}, handler ConnectionHandler) {
+	sub.buffer.Polling(stopCh, func(active int) {
+		conn := sub.GetConnection(active)
+		if conn == nil {
+			return
+		}
+		handler(conn)
+	})
 }
 
-// NewSingleSubReactor creates a instance of a SingleSubReactor
+// NewSingleSubReactor creates an instance of a SingleSubReactor
 func NewSingleSubReactor(bufferSize int) *SingleSubReactor {
 	return &SingleSubReactor{
 		buffer:    internal.NewBuffer[int](bufferSize),
@@ -78,7 +84,7 @@ func (shard *ShardSubReactor) Offer(fds ...int) {
 	}
 }
 
-func (shard *ShardSubReactor) Polling(stopCh <-chan struct{}, handler func(active int)) {
+func (shard *ShardSubReactor) Polling(stopCh <-chan struct{}, handler ConnectionHandler) {
 	shard.container.Iterator(func(sub *SingleSubReactor) {
 		go func() {
 			defer runtime.HandleCrash()

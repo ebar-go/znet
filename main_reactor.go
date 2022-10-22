@@ -2,7 +2,6 @@ package znet
 
 import (
 	"context"
-	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal/poller"
 	"log"
@@ -18,25 +17,19 @@ type MainReactor struct {
 	// sub manage connections
 	sub SubReactor
 
-	// engine handle requests
-	engine *Engine
-
-	// worker work for active connections
-	worker pool.Worker
-
 	// callback manage connections events
 	callback *Callback
 }
 
 // Run runs the MainReactor with the given signal.
-func (reactor *MainReactor) Run(stopCh <-chan struct{}) {
+func (reactor *MainReactor) Run(stopCh <-chan struct{}, handler ConnectionHandler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// cancel context when the given signal is closed
 	defer cancel()
 	go func() {
 		runtime.HandleCrash()
 		// start sub reactor polling task with active connection handler
-		reactor.sub.Polling(ctx.Done(), reactor.onActive)
+		reactor.sub.Polling(ctx.Done(), handler)
 	}()
 
 	reactor.run(stopCh)
@@ -82,36 +75,6 @@ func (reactor *MainReactor) onConnect(conn net.Conn) {
 	reactor.callback.OnConnect(connection)
 }
 
-// onActive is called when the connection is active
-func (reactor *MainReactor) onActive(fd int) {
-	// receive an active connection
-	conn := reactor.sub.GetConnection(fd)
-	if conn == nil {
-		return
-	}
-
-	// get bytes from pool, and release after processed
-	bytes := pool.GetByte(reactor.options.MaxReadBufferSize)
-	// read message
-	n, err := conn.ReadPacket(bytes, reactor.options.packetLengthSize)
-	if err != nil {
-		conn.Close()
-		pool.PutByte(bytes)
-		return
-	}
-
-	// process request
-	reactor.worker.Schedule(func() {
-		// avoid panic and release bytes
-		defer func() {
-			runtime.HandleCrash()
-			pool.PutByte(bytes)
-		}()
-		// handle request
-		reactor.engine.HandleRequest(conn, bytes[:n])
-	})
-}
-
 // NewMainReactor return a new main reactor instance
 func NewMainReactor(options ReactorOptions) (*MainReactor, error) {
 	poll, err := poller.NewPollerWithBuffer(options.EpollBufferSize)
@@ -122,8 +85,6 @@ func NewMainReactor(options ReactorOptions) (*MainReactor, error) {
 	reactor := &MainReactor{
 		options: options,
 		poll:    poll,
-		engine:  NewEngine(),
-		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
 	}
 
 	// choose sub reactor implements by shard count

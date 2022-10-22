@@ -1,8 +1,8 @@
 package znet
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"testing"
 	"time"
 )
@@ -45,10 +45,11 @@ func TestSubReactor_UnregisterConnection(t *testing.T) {
 
 func TestSubReactor_OfferAndPolling(t *testing.T) {
 	sub := NewSingleSubReactor(1024)
+	sub.RegisterConnection(NewConnection(nil, 1))
 
 	stop := make(chan struct{})
-	go sub.Polling(stop, func(active int) {
-		fmt.Println("active: ", active)
+	go sub.Polling(stop, func(conn *Connection) {
+		log.Println(conn.ID())
 	})
 
 	sub.Offer(1, 2, 3)

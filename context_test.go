@@ -20,7 +20,7 @@ func TestContext_Conn(t *testing.T) {
 }
 
 func TestContext_Next(t *testing.T) {
-	engine := NewEngine()
+	engine := NewThread(defaultThreadOptions())
 	engine.Use(func(ctx *Context) {
 		log.Println("Testing context")
 		ctx.Next()
@@ -29,13 +29,13 @@ func TestContext_Next(t *testing.T) {
 	})
 	ctx := &Context{
 		conn:   NewConnection(nil, 1),
-		engine: engine,
+		thread: engine,
 	}
 	engine.invokeContextHandler(ctx, 0)
 }
 
 func TestContext_Abort(t *testing.T) {
-	engine := NewEngine()
+	engine := NewThread(defaultThreadOptions())
 	engine.Use(func(ctx *Context) {
 		log.Println("Testing context")
 		ctx.Abort()
@@ -44,16 +44,16 @@ func TestContext_Abort(t *testing.T) {
 	})
 	ctx := &Context{
 		conn:   NewConnection(nil, 1),
-		engine: engine,
+		thread: engine,
 	}
 	engine.invokeContextHandler(ctx, 0)
 }
 
 func TestContext_reset(t *testing.T) {
-	engine := NewEngine()
+	engine := NewThread(defaultThreadOptions())
 	ctx := &Context{
 		conn:    NewConnection(nil, 1),
-		engine:  engine,
+		thread:  engine,
 		Context: context.Background(),
 		request: &codec.Packet{},
 		index:   1,
