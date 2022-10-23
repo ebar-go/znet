@@ -104,7 +104,7 @@ func (e *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 			return
 		}
 		packet := ctx.Request()
-		packet.Seq++
+		packet.Header.Seq++
 		// pack response
 		msg, err := e.codec.Pack(packet, ctx.response)
 		if err != nil {

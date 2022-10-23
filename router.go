@@ -51,7 +51,7 @@ func (router *Router) handleRequest(ctx *Context) {
 	packet := ctx.request
 	// match handler
 	router.rwm.RLock()
-	handler, ok := router.handlers[packet.Operate]
+	handler, ok := router.handlers[packet.Header.Operate]
 	router.rwm.RUnlock()
 	if !ok {
 		router.handleNotFound(ctx)

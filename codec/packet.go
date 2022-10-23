@@ -7,10 +7,14 @@ import (
 )
 
 type Packet struct {
+	Header Header
+	Body   []byte
+}
+
+type Header struct {
 	Operate     int16
 	ContentType int16
 	Seq         int16
-	Body        []byte
 }
 
 const (
@@ -20,9 +24,9 @@ const (
 
 // Marshal marshals the given data into body by content type
 func (packet *Packet) Marshal(data any) ([]byte, error) {
-	if packet.ContentType == ContentTypeJSON {
+	if packet.Header.ContentType == ContentTypeJSON {
 		return json.Marshal(data)
-	} else if packet.ContentType == ContentTypeProtobuf {
+	} else if packet.Header.ContentType == ContentTypeProtobuf {
 		message, ok := data.(proto.Message)
 		if !ok {
 			return nil, errors.New("unsupported proto object")
@@ -36,9 +40,9 @@ func (packet *Packet) Marshal(data any) ([]byte, error) {
 
 // Unmarshal parses the body by content type and stores the result
 func (packet *Packet) Unmarshal(data any) error {
-	if packet.ContentType == ContentTypeJSON {
+	if packet.Header.ContentType == ContentTypeJSON {
 		return json.Unmarshal(packet.Body, data)
-	} else if packet.ContentType == ContentTypeProtobuf {
+	} else if packet.Header.ContentType == ContentTypeProtobuf {
 		message, ok := data.(proto.Message)
 		if !ok {
 			return errors.New("unsupported proto object")
@@ -51,8 +55,6 @@ func (packet *Packet) Unmarshal(data any) error {
 }
 
 func (packet *Packet) Reset() {
-	packet.Operate = 0
-	packet.ContentType = ContentTypeJSON
-	packet.Seq = 0
+	packet.Header = Header{}
 	packet.Body = nil
 }

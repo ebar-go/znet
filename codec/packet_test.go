@@ -36,10 +36,12 @@ func TestPacket_Unmarshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			packet := Packet{
-				Operate:     0,
-				ContentType: tt.fields.ContentType,
-				Seq:         0,
-				Body:        tt.fields.Body,
+				Header: Header{
+					Operate:     0,
+					ContentType: tt.fields.ContentType,
+					Seq:         0,
+				},
+				Body: tt.fields.Body,
 			}
 			data := tt.args.data
 			assert.Equal(t, tt.err, packet.Unmarshal(data))
@@ -76,7 +78,9 @@ func TestPacket_Marshal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			packet := Packet{
-				ContentType: tt.fields.ContentType,
+				Header: Header{
+					ContentType: tt.fields.ContentType,
+				},
 			}
 			_, err := packet.Marshal(tt.args.data)
 			assert.Equal(t, tt.err, err)

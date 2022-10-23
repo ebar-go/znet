@@ -74,9 +74,9 @@ func (codec DefaultCodec) Pack(packet *Packet, data any) ([]byte, error) {
 	buf := make([]byte, length)
 
 	codec.endian.PutInt32(buf[0:codec.options.packetLengthOffset], int32(length))
-	codec.endian.PutInt16(buf[codec.options.packetLengthOffset:codec.options.operateOffset], packet.Operate)
-	codec.endian.PutInt16(buf[codec.options.operateOffset:codec.options.contentTypeOffset], packet.ContentType)
-	codec.endian.PutInt16(buf[codec.options.contentTypeOffset:codec.options.seqOffset], packet.Seq)
+	codec.endian.PutInt16(buf[codec.options.packetLengthOffset:codec.options.operateOffset], packet.Header.Operate)
+	codec.endian.PutInt16(buf[codec.options.operateOffset:codec.options.contentTypeOffset], packet.Header.ContentType)
+	codec.endian.PutInt16(buf[codec.options.contentTypeOffset:codec.options.seqOffset], packet.Header.Seq)
 	codec.endian.PutString(buf[codec.options.headerSize:], string(body))
 	return buf, nil
 }
@@ -87,9 +87,9 @@ func (codec DefaultCodec) Unpack(packet *Packet, msg []byte) error {
 	}
 
 	length := int(codec.endian.Int32(msg[0:codec.options.packetLengthOffset]))
-	packet.Operate = codec.endian.Int16(msg[codec.options.packetLengthOffset:codec.options.operateOffset])
-	packet.ContentType = codec.endian.Int16(msg[codec.options.operateOffset:codec.options.contentTypeOffset])
-	packet.Seq = codec.endian.Int16(msg[codec.options.contentTypeOffset:codec.options.seqOffset])
+	packet.Header.Operate = codec.endian.Int16(msg[codec.options.packetLengthOffset:codec.options.operateOffset])
+	packet.Header.ContentType = codec.endian.Int16(msg[codec.options.operateOffset:codec.options.contentTypeOffset])
+	packet.Header.Seq = codec.endian.Int16(msg[codec.options.contentTypeOffset:codec.options.seqOffset])
 
 	if length > len(msg) {
 		return errors.New("unexpected packet length")
