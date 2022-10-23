@@ -14,13 +14,13 @@ func TestThread(t *testing.T) {
 func TestThread_UseAndHandleRequest(t *testing.T) {
 	instance := NewThread(defaultThreadOptions())
 	msg := []byte("foo")
-	packet := &codec.Packet{Operate: 1}
+	packet := &codec.Packet{Header: codec.Header{Operate: 1}}
 	instance.Use(func(ctx *Context) {
 		ctx.request = packet
 		ctx.Next()
 	}, func(ctx *Context) {
 		assert.Equal(t, msg, ctx.msg)
-		assert.Equal(t, packet.Operate, ctx.Request().Operate)
+		assert.Equal(t, packet.Header.Operate, ctx.Request().Header.Operate)
 	})
 	instance.HandleRequest(nil)
 }

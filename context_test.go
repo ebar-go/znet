@@ -10,8 +10,8 @@ import (
 
 func TestContext_Request(t *testing.T) {
 	operate := int16(1)
-	ctx := &Context{request: &codec.Packet{Operate: operate}}
-	assert.Equal(t, operate, ctx.Request().Operate)
+	ctx := &Context{request: &codec.Packet{Header: codec.Header{Operate: operate}}}
+	assert.Equal(t, operate, ctx.Request().Header.Operate)
 }
 
 func TestContext_Conn(t *testing.T) {
