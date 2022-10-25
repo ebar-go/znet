@@ -128,7 +128,9 @@ func NewThread(options ThreadOptions) *Thread {
 	engine := &Thread{
 		options: options,
 		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
-		codec:   codec.Default(),
+		codec: codec.Default(func(opts *codec.Options) {
+			opts.ContentType = options.ContentType
+		}),
 		packetProvider: internal.NewSyncPoolProvider[*codec.Packet](func() interface{} {
 			return &codec.Packet{}
 		}),
