@@ -73,8 +73,7 @@ func (el *EventLoop) Run(stopCh <-chan struct{}) error {
 	// prepare handler func
 	el.thread.Use(el.thread.decode(el.router.handleError))
 	el.thread.Use(el.options.Middlewares...)
-	el.thread.Use(el.router.handleRequest)
-	el.thread.Use(el.thread.encode(el.router.handleError))
+	el.thread.Use(el.thread.compute(el.router.handleRequest), el.thread.encode(el.router.handleError))
 
 	reactorCtx, reactorCancel := context.WithCancel(ctx)
 	// cancel reactor context when event-loop is stopped

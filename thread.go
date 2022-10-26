@@ -97,6 +97,11 @@ func (e *Thread) decode(errorHandler func(ctx *Context, err error)) HandleFunc {
 	}
 }
 
+// compute process logic
+func (e *Thread) compute(handler HandleFunc) HandleFunc {
+	return handler
+}
+
 func (e *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 	return func(ctx *Context) {
 		// choose not send response to client
