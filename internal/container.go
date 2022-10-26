@@ -3,7 +3,7 @@ package internal
 import "sync"
 
 // Container represents a safe map
-type Container[Key int | string, Value any] struct {
+type Container[Key int | int16 | string, Value any] struct {
 	rmu   sync.RWMutex
 	items map[Key]Value
 }
@@ -31,7 +31,7 @@ func (c *Container[Key, Value]) Del(key Key) {
 }
 
 // NewContainer creates a new Container instance
-func NewContainer[Key int | string, Value any]() *Container[Key, Value] {
+func NewContainer[Key int | int16 | string, Value any]() *Container[Key, Value] {
 	return &Container[Key, Value]{
 		items: make(map[Key]Value),
 	}

@@ -1,14 +1,18 @@
 package znet
 
 import (
+	"github.com/ebar-go/znet/internal"
 	"github.com/pkg/errors"
-	"sync"
 )
 
+// Handler is a handler for operation
 type Handler func(ctx *Context) (any, error)
 
+// Action isa generic function that is friendly to user
+type Action[Request, Response any] func(ctx *Context, request *Request) (*Response, error)
+
 // StandardHandler is a function to convert standard handler.
-func StandardHandler[Request, Response any](action func(ctx *Context, request *Request) (*Response, error)) Handler {
+func StandardHandler[Request, Response any](action Action[Request, Response]) Handler {
 	return func(ctx *Context) (any, error) {
 		request := new(Request)
 		if err := ctx.Request().Unmarshal(request); err != nil {
@@ -20,18 +24,22 @@ func StandardHandler[Request, Response any](action func(ctx *Context, request *R
 
 // Router represents router instance
 type Router struct {
-	rwm             sync.RWMutex
-	handlers        map[int16]Handler
+	handlers        *internal.Container[int16, Handler]
 	errorHandler    func(ctx *Context, err error)
 	notFoundHandler HandleFunc
-	requestHandler  HandleFunc
+}
+
+func NewRouter() *Router {
+	return &Router{
+		handlers:        internal.NewContainer[int16, Handler](),
+		errorHandler:    nil,
+		notFoundHandler: nil,
+	}
 }
 
 // Route register handler for operate
 func (router *Router) Route(operate int16, handler Handler) *Router {
-	router.rwm.Lock()
-	router.handlers[operate] = handler
-	router.rwm.Unlock()
+	router.handlers.Set(operate, handler)
 	return router
 }
 
@@ -50,9 +58,7 @@ func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
 func (router *Router) handleRequest(ctx *Context) {
 	packet := ctx.request
 	// match handler
-	router.rwm.RLock()
-	handler, ok := router.handlers[packet.Header.Operate]
-	router.rwm.RUnlock()
+	handler, ok := router.handlers.Get(packet.Header.Operate)
 	if !ok {
 		router.handleNotFound(ctx)
 		ctx.Abort()
@@ -78,13 +84,5 @@ func (router *Router) handleError(ctx *Context, err error) {
 func (router *Router) handleNotFound(ctx *Context) {
 	if router.notFoundHandler != nil {
 		router.notFoundHandler(ctx)
-	}
-}
-
-func NewRouter() *Router {
-	return &Router{
-		handlers:        map[int16]Handler{},
-		errorHandler:    nil,
-		notFoundHandler: nil,
 	}
 }
