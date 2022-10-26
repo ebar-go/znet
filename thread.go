@@ -89,7 +89,7 @@ func (e *Thread) read(conn *Connection, bytes []byte) (n int, err error) {
 		return
 	}
 	packetLength := int(e.endian.Int32(bytes[:e.options.packetLengthSize]))
-	if packetLength > len(bytes) {
+	if packetLength < e.options.packetLengthSize || packetLength > len(bytes) {
 		err = errors.New("packet exceeded")
 		return
 	}
