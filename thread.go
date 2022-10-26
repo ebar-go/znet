@@ -24,6 +24,26 @@ type Thread struct {
 	endian         binary.Endian
 }
 
+// NewThread returns a new Thread instance
+func NewThread(options ThreadOptions) *Thread {
+	engine := &Thread{
+		options: options,
+		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
+		codec: codec.Default(func(opts *codec.Options) {
+			opts.ContentType = options.ContentType
+		}),
+		packetProvider: internal.NewSyncPoolProvider[*codec.Packet](func() interface{} {
+			return &codec.Packet{}
+		}),
+		endian: binary.BigEndian(),
+	}
+
+	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {
+		return &Context{thread: engine}
+	})
+	return engine
+}
+
 // Use registers middleware
 func (e *Thread) Use(handler ...HandleFunc) {
 	e.handleChains = append(e.handleChains, handler...)
@@ -126,24 +146,4 @@ func (e *Thread) invokeContextHandler(ctx *Context, index int8) {
 		return
 	}
 	e.handleChains[index](ctx)
-}
-
-// NewThread returns a new Thread instance
-func NewThread(options ThreadOptions) *Thread {
-	engine := &Thread{
-		options: options,
-		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
-		codec: codec.Default(func(opts *codec.Options) {
-			opts.ContentType = options.ContentType
-		}),
-		packetProvider: internal.NewSyncPoolProvider[*codec.Packet](func() interface{} {
-			return &codec.Packet{}
-		}),
-		endian: binary.BigEndian(),
-	}
-
-	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {
-		return &Context{thread: engine}
-	})
-	return engine
 }

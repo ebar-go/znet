@@ -44,7 +44,7 @@ func (router *Router) Route(operate int16, handler Handler) *Router {
 }
 
 // OnNotFound is called when operation is not found
-func (router *Router) OnNotFound(handler func(ctx *Context)) *Router {
+func (router *Router) OnNotFound(handler HandleFunc) *Router {
 	router.notFoundHandler = handler
 	return router
 }
