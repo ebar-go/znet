@@ -89,7 +89,7 @@ func main() {
 			default:
 				
 			}
-			packet := &codec.Packet{Operate: OperateFoo, ContentType: codec.ContentTypeJSON}
+			packet := &codec.Packet{Header: codec.Header{Operate: OperateFoo, ContentType: codec.ContentTypeJSON}}
 			bytes, err := codec.Default().Pack(packet, map[string]any{"key": "foo"})
 			if err != nil {
 				return
@@ -114,10 +114,14 @@ func main() {
 
 ## Benchmark
 ```
-goos: windows
+goos: linux
 goarch: amd64
 pkg: github.com/ebar-go/znet
-cpu: AMD Ryzen 7 3700U with Radeon Vega Mobile Gfx
+cpu: Intel(R) Core(TM) i7-9700 CPU @ 3.00GHz
 
-
+|-----------------------------------|
+| connections  |  memory |    cpu   |
+|-----------------------------------|
+|     10000    |   50MB  |          |
+|-----------------------------------|
 ```
