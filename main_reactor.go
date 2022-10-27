@@ -56,8 +56,9 @@ func (reactor *MainReactor) run(stopCh <-chan struct{}) {
 }
 
 // onConnect is called when the connection is established
-func (reactor *MainReactor) onConnect(conn net.Conn) {
+func (reactor *MainReactor) onConnect(conn net.Conn, protocol string) {
 	connection := NewConnection(conn, reactor.poll.SocketFD(conn))
+	connection.protocol = protocol
 	if err := reactor.poll.Add(connection.fd); err != nil {
 		connection.Close()
 		return
