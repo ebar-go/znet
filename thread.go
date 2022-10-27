@@ -74,7 +74,7 @@ func (e *Thread) HandleRequest(conn *Connection) {
 			// reset stateful properties
 			ctx.reset(conn, bytes[:n])
 		} else {
-			msg, err := wsutil.ReadClientBinary(conn)
+			msg, err := wsutil.ReadClientBinary(conn.instance)
 			if err != nil {
 				conn.Close()
 				return
@@ -146,7 +146,9 @@ func (e *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 			errorHandler(ctx, err)
 			return
 		}
+
 		ctx.Conn().Push(msg)
+
 	}
 }
 
