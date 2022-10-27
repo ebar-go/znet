@@ -7,6 +7,7 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
 	"github.com/ebar-go/znet/internal"
+	"github.com/gobwas/ws/wsutil"
 )
 
 // Thread represents context manager
@@ -56,21 +57,30 @@ func (e *Thread) HandleRequest(conn *Connection) {
 	e.worker.Schedule(func() {
 		defer runtime.HandleCrash()
 
-		// get bytes from pool, and release after processed
-		bytes := pool.GetByte(e.options.MaxReadBufferSize)
-		defer pool.PutByte(bytes)
-
-		n, err := e.read(conn, bytes)
-		if err != nil {
-			conn.Close()
-			return
-		}
 		// acquire context from provider
 		ctx := e.contextProvider.Acquire()
 		defer e.contextProvider.Release(ctx)
 
-		// reset stateful properties
-		ctx.reset(conn, bytes[:n])
+		if conn.protocol == internal.TCP {
+			// get bytes from pool, and release after processed
+			bytes := pool.GetByte(e.options.MaxReadBufferSize)
+			defer pool.PutByte(bytes)
+
+			n, err := e.read(conn, bytes)
+			if err != nil {
+				conn.Close()
+				return
+			}
+			// reset stateful properties
+			ctx.reset(conn, bytes[:n])
+		} else {
+			msg, err := wsutil.ReadClientBinary(conn)
+			if err != nil {
+				conn.Close()
+				return
+			}
+			ctx.reset(conn, msg)
+		}
 
 		e.invokeContextHandler(ctx, 0)
 	})

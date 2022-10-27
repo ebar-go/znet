@@ -24,6 +24,7 @@ type Connection struct {
 	beforeCloseHooks []func(connection *Connection)
 	// is a map of properties
 	property *internal.Container[string, any]
+	protocol string
 }
 
 // Property return properties container
