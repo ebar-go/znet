@@ -29,7 +29,6 @@ func (buffer *Buffer[T]) Polling(stopCh <-chan struct{}, handler func(item T)) {
 			return
 		case active := <-buffer.queue:
 			handler(active)
-		default:
 		}
 	}
 }

@@ -72,7 +72,7 @@ func (e *Epoll) Wait() ([]int, error) {
 
 	connections := e.connBuffers[:0]
 	for i := 0; i < n; i++ {
-		if events[i].Fd == 0 {
+		if events[i].Events == 0 || events[i].Fd == 0 {
 			continue
 		}
 

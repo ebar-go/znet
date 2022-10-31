@@ -48,6 +48,9 @@ func (reactor *MainReactor) run(stopCh <-chan struct{}) {
 				log.Println("unable to get active socket connection from epoll:", err)
 				continue
 			}
+			if len(active) == 0 {
+				continue
+			}
 
 			// push the active connections to queue
 			reactor.sub.Offer(active...)

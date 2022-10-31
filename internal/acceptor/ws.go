@@ -67,7 +67,7 @@ func NewWSAcceptor(options *Options, handler func(conn net.Conn)) *WebsocketAcce
 		options: options,
 		upgrade: ws.Upgrader{
 			OnHeader: func(key, value []byte) (err error) {
-				log.Printf("non-websocket header: %q=%q", key, value)
+				//log.Printf("non-websocket header: %q=%q", key, value)
 				return
 			},
 		},
