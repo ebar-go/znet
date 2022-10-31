@@ -13,7 +13,7 @@ import (
 func provideNetConn() net.Conn {
 	stop := make(chan struct{})
 	go internal.NewSchema(internal.TCP, ":8081").
-		Listen(stop, func(conn net.Conn) {
+		Listen(stop, func(conn net.Conn, protocol string) {
 			content := time.Now().String()
 			buf := make([]byte, len(content)+4)
 			binary.BigEndian().PutInt32(buf[:4], int32(len(content))+4)
