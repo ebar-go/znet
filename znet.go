@@ -25,11 +25,26 @@ type Instance interface {
 
 // EventLoop represents im framework public access api.
 type EventLoop struct {
-	options *Options
-	schemas []internal.Schema
-	router  *Router
+	options *Options          // options for the event loop
+	schemas []internal.Schema // schema for acceptors
+	router  *Router           // router for handlers
 	main    *MainReactor
 	thread  *Thread
+}
+
+// New returns a new el instance
+func New(opts ...Option) Instance {
+	options := defaultOptions()
+	for _, setter := range opts {
+		setter(options)
+	}
+
+	return &EventLoop{
+		options: options,
+		main:    options.NewMainReactor(),
+		router:  options.NewRouter(),
+		thread:  options.NewThread(),
+	}
 }
 
 // ListenTCP listens for tcp connections
@@ -54,20 +69,14 @@ func (el *EventLoop) Run(stopCh <-chan struct{}) error {
 	}
 	ctx := context.Background()
 	if len(el.schemas) == 0 {
-		return errors.New("empty listen target")
+		return errors.New("please listen one protocol at least")
 	}
 
 	// prepare servers
 	schemaCtx, schemeCancel := context.WithCancel(ctx)
-	// cancel schema context when el is stopped
 	defer schemeCancel()
-	for _, schema := range el.schemas {
-		// listen with context and connection register callback function
-		if err := schema.Listen(schemaCtx.Done(), el.main.onConnect); err != nil {
-			return err
-		}
-
-		log.Printf("start listener: %v\n", schema)
+	if err := el.runSchemas(schemaCtx); err != nil {
+		return err
 	}
 
 	// prepare handler func
@@ -76,32 +85,33 @@ func (el *EventLoop) Run(stopCh <-chan struct{}) error {
 	el.thread.Use(el.thread.compute(el.router.handleRequest), el.thread.encode(el.router.handleError))
 
 	reactorCtx, reactorCancel := context.WithCancel(ctx)
-	// cancel reactor context when event-loop is stopped
 	defer reactorCancel()
-	go func() {
-		defer runtime.HandleCrash()
-		el.main.Run(reactorCtx.Done(), el.thread.HandleRequest)
-	}()
+	el.runReactor(reactorCtx)
 
 	runtime.WaitClose(stopCh, el.shutdown)
 	return nil
 }
 
-func (el *EventLoop) shutdown() {
-	log.Println("server shutdown complete")
+func (el *EventLoop) runSchemas(ctx context.Context) error {
+	// prepare servers
+	for _, schema := range el.schemas {
+		// listen with context and connection register callback function
+		if err := schema.Listen(ctx.Done(), el.main.onConnect); err != nil {
+			return err
+		}
+
+		log.Printf("start listener: %v\n", schema)
+	}
+	return nil
 }
 
-// New returns a new el instance
-func New(opts ...Option) Instance {
-	options := defaultOptions()
-	for _, setter := range opts {
-		setter(options)
-	}
+func (el *EventLoop) runReactor(ctx context.Context) {
+	go func() {
+		defer runtime.HandleCrash()
+		el.main.Run(ctx.Done(), el.thread.HandleRequest)
+	}()
+}
 
-	return &EventLoop{
-		options: options,
-		main:    options.NewMainReactor(),
-		router:  options.NewRouter(),
-		thread:  options.NewThread(),
-	}
+func (el *EventLoop) shutdown() {
+	log.Println("server shutdown complete")
 }
