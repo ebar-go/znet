@@ -1,12 +1,17 @@
 package acceptor
 
-import "runtime"
+import (
+	"runtime"
+	"time"
+)
 
 type Options struct {
 	Core            int
 	ReadBufferSize  int
 	WriteBufferSize int
 	Keepalive       bool
+	WriteDeadline   time.Duration
+	ReadDeadline    time.Duration
 }
 
 func DefaultOptions() *Options {
@@ -15,5 +20,7 @@ func DefaultOptions() *Options {
 		ReadBufferSize:  4096,
 		WriteBufferSize: 4096,
 		Keepalive:       false,
+		WriteDeadline:   time.Second * 3,
+		ReadDeadline:    time.Second * 3,
 	}
 }
