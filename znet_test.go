@@ -19,12 +19,12 @@ func TestNew(t *testing.T) {
 		runtime.ShowMemoryUsage()
 	}()
 	instance := New(func(options *Options) {
-		//options.OnConnect = func(conn *Connection) {
-		//	log.Printf("[%s] connected", conn.ID())
-		//}
-		//options.OnDisconnect = func(conn *Connection) {
-		//	log.Printf("[%s] disconnected", conn.ID())
-		//}
+		options.OnConnect = func(conn *Connection) {
+			log.Printf("[%s] connected", conn.ID())
+		}
+		options.OnDisconnect = func(conn *Connection) {
+			log.Printf("[%s] disconnected", conn.ID())
+		}
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)

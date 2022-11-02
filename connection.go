@@ -70,6 +70,11 @@ func (conn *Connection) AddBeforeCloseHook(hooks ...func(conn *Connection)) {
 	conn.beforeCloseHooks = append(conn.beforeCloseHooks, hooks...)
 }
 
+func (conn *Connection) withProtocol(protocol string) *Connection {
+	conn.protocol = protocol
+	return conn
+}
+
 // NewConnection returns a new Connection instance
 func NewConnection(conn net.Conn, fd int) *Connection {
 	return &Connection{

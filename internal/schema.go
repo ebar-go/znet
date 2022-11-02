@@ -27,15 +27,15 @@ func (schema Schema) String() string {
 func (schema Schema) Listen(stopCh <-chan struct{}, handler func(conn net.Conn, protocol string)) error {
 	var instance acceptor.Instance
 	options := acceptor.DefaultOptions()
+
+	delegateHandler := func(conn net.Conn) {
+		handler(conn, schema.Protocol)
+	}
 	switch schema.Protocol {
 	case TCP:
-		instance = acceptor.NewTCPAcceptor(options, func(conn net.Conn) {
-			handler(conn, schema.Protocol)
-		})
+		instance = acceptor.NewTCPAcceptor(options, delegateHandler)
 	case WEBSOCKET:
-		instance = acceptor.NewWSAcceptor(options, func(conn net.Conn) {
-			handler(conn, schema.Protocol)
-		})
+		instance = acceptor.NewWSAcceptor(options, delegateHandler)
 	default:
 		return fmt.Errorf("unsupported protocol: %v", schema.Protocol)
 	}

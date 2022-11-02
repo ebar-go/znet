@@ -79,11 +79,6 @@ func (el *EventLoop) Run(stopCh <-chan struct{}) error {
 		return err
 	}
 
-	// prepare handler func
-	el.thread.Use(el.thread.decode(el.router.handleError))
-	el.thread.Use(el.options.Middlewares...)
-	el.thread.Use(el.thread.compute(el.router.handleRequest), el.thread.encode(el.router.handleError))
-
 	reactorCtx, reactorCancel := context.WithCancel(ctx)
 	defer reactorCancel()
 	el.runReactor(reactorCtx)
@@ -106,6 +101,11 @@ func (el *EventLoop) runSchemas(ctx context.Context) error {
 }
 
 func (el *EventLoop) runReactor(ctx context.Context) {
+	// prepare handler func
+	el.thread.Use(el.thread.decode(el.router.handleError))
+	el.thread.Use(el.options.Middlewares...)
+	el.thread.Use(el.thread.compute(el.router.handleRequest), el.thread.encode(el.router.handleError))
+
 	go func() {
 		defer runtime.HandleCrash()
 		el.main.Run(ctx.Done(), el.thread.HandleRequest)

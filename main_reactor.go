@@ -10,15 +10,10 @@ import (
 
 // MainReactor represents the epoll model for listen connections.
 type MainReactor struct {
-	options ReactorOptions
-	// poll use to listen active connections
-	poll poller.Poller
-
-	// sub manage connections
-	sub SubReactor
-
-	// callback manage connections events
-	callback *Callback
+	options  ReactorOptions
+	poll     poller.Poller // use to listen active connections
+	sub      SubReactor    // manage connections
+	callback *Callback     // manage connections events
 }
 
 // Run runs the MainReactor with the given signal.
@@ -27,7 +22,7 @@ func (reactor *MainReactor) Run(stopCh <-chan struct{}, handler ConnectionHandle
 	// cancel context when the given signal is closed
 	defer cancel()
 	go func() {
-		runtime.HandleCrash()
+		defer runtime.HandleCrash()
 		// start sub reactor polling task with active connection handler
 		reactor.sub.Polling(ctx.Done(), handler)
 	}()
@@ -60,8 +55,7 @@ func (reactor *MainReactor) run(stopCh <-chan struct{}) {
 
 // onConnect is called when the connection is established
 func (reactor *MainReactor) onConnect(conn net.Conn, protocol string) {
-	connection := NewConnection(conn, reactor.poll.SocketFD(conn))
-	connection.protocol = protocol
+	connection := NewConnection(conn, reactor.poll.SocketFD(conn)).withProtocol(protocol)
 	if err := reactor.poll.Add(connection.fd); err != nil {
 		connection.Close()
 		return
