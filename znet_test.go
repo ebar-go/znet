@@ -65,8 +65,7 @@ func TestClient(t *testing.T) {
 			select {
 			case <-ctx.Done():
 			default:
-				packet := &codec.Packet{Header: codec.Header{Operate: 1, ContentType: codec.ContentTypeJSON}}
-				bytes, err := codec.Default().Pack(packet, map[string]any{"key": "foo"})
+				bytes, err := codec.NewPacket(codec.Header{Operate: 1, ContentType: codec.ContentTypeJSON}).Pack(map[string]any{"key": "foo"})
 				if err != nil {
 					return
 				}
@@ -124,8 +123,7 @@ func BenchmarkClient(b *testing.B) {
 		metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	}()
 
-	packet := &codec.Packet{Header: codec.Header{Operate: 1, ContentType: codec.ContentTypeJSON}}
-	bytes, err := codec.Default().Pack(packet, map[string]any{"key": "foo"})
+	bytes, err := codec.Default().Pack(map[string]any{"key": "foo"})
 	if err != nil {
 		return
 	}

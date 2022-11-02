@@ -2,16 +2,15 @@ package znet
 
 import (
 	"context"
-	"github.com/ebar-go/znet/codec"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
 )
 
 func TestContext_Request(t *testing.T) {
-	operate := int16(1)
-	ctx := &Context{request: &codec.Packet{Header: codec.Header{Operate: operate}}}
-	assert.Equal(t, operate, ctx.Request().Header.Operate)
+	request := []byte("foo")
+	ctx := &Context{request: request}
+	assert.Equal(t, request, ctx.Request())
 }
 
 func TestContext_Conn(t *testing.T) {
@@ -55,9 +54,7 @@ func TestContext_reset(t *testing.T) {
 		conn:    NewConnection(nil, 1),
 		thread:  engine,
 		Context: context.Background(),
-		request: &codec.Packet{},
 		index:   1,
-		msg:     []byte("foo"),
 	}
 
 	ctx.reset(NewConnection(nil, 2), []byte("bar"))

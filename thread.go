@@ -19,10 +19,10 @@ type Thread struct {
 	// contextProvider is a provider for context
 	contextProvider internal.Provider[*Context]
 
-	worker         pool.Worker
-	codec          codec.Codec
-	packetProvider internal.Provider[*codec.Packet]
-	endian         binary.Endian
+	worker        pool.Worker
+	codec         codec.Codec
+	codecProvider internal.Provider[codec.Codec]
+	endian        binary.Endian
 }
 
 // NewThread returns a new Thread instance
@@ -30,11 +30,8 @@ func NewThread(options ThreadOptions) *Thread {
 	engine := &Thread{
 		options: options,
 		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
-		codec: codec.Default(func(opts *codec.Options) {
-			opts.ContentType = options.ContentType
-		}),
-		packetProvider: internal.NewSyncPoolProvider[*codec.Packet](func() interface{} {
-			return &codec.Packet{}
+		codecProvider: internal.NewSyncPoolProvider[codec.Codec](func() interface{} {
+			return codec.Default()
 		}),
 		endian: binary.BigEndian(),
 	}
@@ -57,30 +54,37 @@ func (e *Thread) HandleRequest(conn *Connection) {
 	e.worker.Schedule(func() {
 		defer runtime.HandleCrash()
 
-		// acquire context from provider
-		ctx := e.contextProvider.Acquire()
-		defer e.contextProvider.Release(ctx)
+		var (
+			msg []byte
+			err error
+		)
 
 		if conn.protocol == internal.TCP {
+			var n int
 			// get bytes from pool, and release after processed
 			bytes := pool.GetByte(e.options.MaxReadBufferSize)
 			defer pool.PutByte(bytes)
 
-			n, err := e.read(conn, bytes)
-			if err != nil {
-				conn.Close()
-				return
-			}
+			n, err = e.read(conn, bytes)
 			// reset stateful properties
-			ctx.reset(conn, bytes[:n])
+			msg = bytes[:n]
 		} else {
-			msg, err := wsutil.ReadClientBinary(conn.instance)
-			if err != nil {
-				conn.Close()
-				return
-			}
-			ctx.reset(conn, msg)
+			msg, err = wsutil.ReadClientBinary(conn.instance)
 		}
+
+		if err != nil {
+			conn.Close()
+			return
+		}
+
+		// acquire context from provider
+		ctx := e.contextProvider.Acquire()
+		defer e.contextProvider.Release(ctx)
+
+		codecInstance := e.codecProvider.Acquire()
+		defer e.codecProvider.Release(codecInstance)
+		ctx.reset(conn, msg)
+		ctx.codec = codecInstance
 
 		e.invokeContextHandler(ctx, 0)
 	})
@@ -110,19 +114,12 @@ func (e *Thread) read(conn *Connection, bytes []byte) (n int, err error) {
 
 func (e *Thread) decode(errorHandler func(ctx *Context, err error)) HandleFunc {
 	return func(ctx *Context) {
-		// new packet instance from pool, release it after finished
-		packet := e.packetProvider.Acquire()
-		defer e.packetProvider.Release(packet)
-		packet.Reset()
-
-		// unpack
-		err := e.codec.Unpack(packet, ctx.msg)
+		err := ctx.codec.Decode(ctx.request)
 		if err != nil {
 			errorHandler(ctx, err)
 			ctx.Abort()
 			return
 		}
-		ctx.request = packet
 		ctx.Next()
 	}
 }
@@ -134,21 +131,14 @@ func (e *Thread) compute(handler HandleFunc) HandleFunc {
 
 func (e *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 	return func(ctx *Context) {
-		// choose not send response to client
-		if ctx.response == nil {
-			return
-		}
-		packet := ctx.Request()
-		packet.Header.Seq++
 		// pack response
-		msg, err := e.codec.Pack(packet, ctx.response)
+		msg, err := ctx.codec.Pack(ctx.response)
 		if err != nil {
 			errorHandler(ctx, err)
 			return
 		}
 
 		ctx.Conn().Push(msg)
-
 	}
 }
 
