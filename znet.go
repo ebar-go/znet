@@ -101,7 +101,7 @@ func (el *EventLoop) runSchemas(ctx context.Context) error {
 }
 
 func (el *EventLoop) runReactor(ctx context.Context) {
-	// prepare handler func
+	// decode request -> compute request -> encode response
 	el.thread.Use(el.thread.decode(el.router.handleError))
 	el.thread.Use(el.options.Middlewares...)
 	el.thread.Use(el.thread.compute(el.router.handleRequest), el.thread.encode(el.router.handleError))

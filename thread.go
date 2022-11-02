@@ -5,7 +5,6 @@ import (
 	"github.com/ebar-go/ego/utils/binary"
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
-	"github.com/ebar-go/znet/codec"
 	"github.com/ebar-go/znet/internal"
 	"github.com/gobwas/ws/wsutil"
 )
@@ -13,16 +12,13 @@ import (
 // Thread represents context manager
 type Thread struct {
 	options ThreadOptions
-	// handlerChains is a list of handlers
-	handleChains []HandleFunc
 
-	// contextProvider is a provider for context
-	contextProvider internal.Provider[*Context]
+	handleChains []HandleFunc // is a list of handlers
 
-	worker        pool.Worker
-	codec         codec.Codec
-	codecProvider internal.Provider[codec.Codec]
-	endian        binary.Endian
+	contextProvider internal.Provider[*Context] // is a pool for Context
+	worker          pool.Worker
+
+	endian binary.Endian
 }
 
 // NewThread returns a new Thread instance
@@ -30,10 +26,7 @@ func NewThread(options ThreadOptions) *Thread {
 	engine := &Thread{
 		options: options,
 		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
-		codecProvider: internal.NewSyncPoolProvider[codec.Codec](func() interface{} {
-			return codec.Default()
-		}),
-		endian: binary.BigEndian(),
+		endian:  binary.BigEndian(),
 	}
 
 	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {
@@ -50,7 +43,6 @@ func (e *Thread) Use(handler ...HandleFunc) {
 // HandleRequest handle new request for connection
 func (e *Thread) HandleRequest(conn *Connection) {
 	// start schedule task
-	// read request -> compute request -> send response
 	e.worker.Schedule(func() {
 		defer runtime.HandleCrash()
 
@@ -66,9 +58,12 @@ func (e *Thread) HandleRequest(conn *Connection) {
 			defer pool.PutByte(bytes)
 
 			n, err = e.read(conn, bytes)
-			// reset stateful properties
-			msg = bytes[:n]
+			if err == nil {
+				msg = bytes[:n]
+			}
+
 		} else {
+			// read websocket request message
 			msg, err = wsutil.ReadClientBinary(conn.instance)
 		}
 
@@ -81,10 +76,7 @@ func (e *Thread) HandleRequest(conn *Connection) {
 		ctx := e.contextProvider.Acquire()
 		defer e.contextProvider.Release(ctx)
 
-		codecInstance := e.codecProvider.Acquire()
-		defer e.codecProvider.Release(codecInstance)
 		ctx.reset(conn, msg)
-		ctx.codec = codecInstance
 
 		e.invokeContextHandler(ctx, 0)
 	})
@@ -124,7 +116,6 @@ func (e *Thread) decode(errorHandler func(ctx *Context, err error)) HandleFunc {
 	}
 }
 
-// compute process logic
 func (e *Thread) compute(handler HandleFunc) HandleFunc {
 	return handler
 }
