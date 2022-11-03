@@ -34,6 +34,7 @@ func TestNew(t *testing.T) {
 	instance.ListenWebsocket(":8082")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
+		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Request()))
 		return map[string]any{"val": "bar"}, nil
 	})
 	err := instance.Run(ctx.Done())
@@ -65,7 +66,7 @@ func TestClient(t *testing.T) {
 			select {
 			case <-ctx.Done():
 			default:
-				bytes, err := codec.NewPacket(codec.Header{Operate: 1, ContentType: codec.ContentTypeJSON}).Pack(map[string]any{"key": "foo"})
+				bytes, err := codec.Factory().NewWithHeader(codec.Header{Operate: 1, ContentType: codec.ContentTypeJSON}).Pack(map[string]any{"key": "foo"})
 				if err != nil {
 					return
 				}
@@ -123,7 +124,7 @@ func BenchmarkClient(b *testing.B) {
 		metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	}()
 
-	bytes, err := codec.Default().Pack(map[string]any{"key": "foo"})
+	bytes, err := codec.Factory().New().Pack(map[string]any{"key": "foo"})
 	if err != nil {
 		return
 	}

@@ -58,5 +58,5 @@ func (ctx *Context) reset(conn *Connection, msg []byte) {
 	ctx.Context = context.Background()
 	ctx.response = nil
 	ctx.request = msg
-	ctx.codec = codec.Default()
+	ctx.codec = codec.Factory().New()
 }
