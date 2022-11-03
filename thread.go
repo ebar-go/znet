@@ -96,7 +96,8 @@ func (e *Thread) read(conn *Connection, bytes []byte) (n int, err error) {
 	}
 	packetLength := int(e.endian.Int32(bytes[:e.options.packetLengthSize]))
 	if packetLength < e.options.packetLengthSize || packetLength > len(bytes) {
-		err = errors.New("packet exceeded")
+		// when connection is closed, first read packet length may be successfully, but connection has closed
+		err = errors.New("packet exceeded, connection may be closed")
 		return
 	}
 	_, err = conn.Read(bytes[e.options.packetLengthSize:packetLength])
