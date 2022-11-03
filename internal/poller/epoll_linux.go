@@ -28,11 +28,13 @@ func (e *Epoll) Add(fd int) error {
 	// 向 epoll 实例注册文件描述符对应的事件
 	// POLLIN 表示对应的文件描述字可以读
 	// POLLHUP 表示对应的文件描述字被挂起
+	// EPOLLET 将EPOLL设为边缘触发(Edge Triggered)模式，这是相对于水平触发(Level Triggered)来说的。缺省是水平触发(Level Triggered)。
+
 	// 只有当链接有数据可以读或者连接被关闭时，wait才会唤醒
 	err := unix.EpollCtl(e.fd,
 		unix.EPOLL_CTL_ADD,
 		fd,
-		&unix.EpollEvent{Events: unix.POLLIN | unix.POLLHUP, Fd: int32(fd)})
+		&unix.EpollEvent{Events: unix.POLLIN | unix.POLLHUP | unix.EPOLLET, Fd: int32(fd)})
 
 	if err != nil {
 		return err
@@ -59,7 +61,7 @@ func (e *Epoll) Wait() ([]int, error) {
 		err error
 	)
 	for {
-		n, err = unix.EpollWait(e.fd, events, e.maxEventSize)
+		n, err = unix.EpollWait(e.fd, events, 100)
 		if err == nil {
 			break
 		}

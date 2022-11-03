@@ -86,7 +86,7 @@ func NewMainReactor(options ReactorOptions) (*MainReactor, error) {
 	}
 
 	// choose sub reactor implements by shard count
-	if options.SubReactorShardCount <= 0 {
+	if options.SubReactorShardCount <= 1 {
 		reactor.sub = NewSingleSubReactor(options.ThreadQueueCapacity)
 	} else {
 		reactor.sub = NewShardSubReactor(options.SubReactorShardCount, options.ThreadQueueCapacity)
