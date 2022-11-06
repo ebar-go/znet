@@ -26,9 +26,9 @@ func (e *Epoll) Add(fd int) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 	// 向 epoll 实例注册文件描述符对应的事件
-	// POLLIN 表示对应的文件描述字可以读
-	// POLLHUP 表示对应的文件描述字被挂起
-	// EPOLLET 将EPOLL设为边缘触发(Edge Triggered)模式，这是相对于水平触发(Level Triggered)来说的。缺省是水平触发(Level Triggered)。
+	// POLLIN(0x1) 表示对应的文件描述字可以读
+	// POLLHUP(0x10) 表示对应的文件描述字被挂起
+	// EPOLLET(0x80000000) 将EPOLL设为边缘触发(Edge Triggered)模式，这是相对于水平触发(Level Triggered)来说的。缺省是水平触发(Level Triggered)。
 
 	// 只有当链接有数据可以读或者连接被关闭时，wait才会唤醒
 	err := unix.EpollCtl(e.fd,

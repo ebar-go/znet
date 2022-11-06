@@ -4,6 +4,7 @@ import (
 	"github.com/ebar-go/znet/internal"
 	"github.com/gobwas/ws/wsutil"
 	uuid "github.com/satori/go.uuid"
+	"log"
 	"net"
 	"sync"
 )
@@ -33,6 +34,10 @@ func (conn *Connection) Property() *internal.Container[string, any] {
 	return conn.property
 }
 
+func (conn *Connection) IP() string {
+	return conn.instance.RemoteAddr().String()
+}
+
 // ID returns the uuid of the connection
 func (conn *Connection) ID() string { return conn.uuid }
 
@@ -57,6 +62,7 @@ func (conn *Connection) Read(p []byte) (int, error) {
 
 // Close closes the connection
 func (conn *Connection) Close() {
+	log.Printf("[%s] connection closed", conn.ID())
 	conn.once.Do(func() {
 		for _, hook := range conn.beforeCloseHooks {
 			hook(conn)

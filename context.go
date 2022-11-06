@@ -32,6 +32,10 @@ func (ctx *Context) Request() []byte {
 	return ctx.request
 }
 
+func (ctx *Context) Header() codec.Header {
+	return ctx.codec.Header()
+}
+
 // Conn return instance of Connection
 func (ctx *Context) Conn() *Connection {
 	return ctx.conn
