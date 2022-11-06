@@ -89,8 +89,8 @@ func main() {
 			default:
 				
 			}
-			packet := &codec.Packet{Header: codec.Header{Operate: OperateFoo, ContentType: codec.ContentTypeJSON}}
-			bytes, err := codec.Default().Pack(packet, map[string]any{"key": "foo"})
+			packet := codec.Factory().NewWithHeader(codec.Header{Operate: OperateFoo, ContentType: codec.ContentTypeJSON})
+			bytes, err := packet.Pack(map[string]any{"key": "foo"})
 			if err != nil {
 				return
 			}
