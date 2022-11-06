@@ -85,6 +85,14 @@ func (options *Options) Validate() error {
 	return nil
 }
 
+func completeOptions(setters ...Option) *Options {
+	options := defaultOptions()
+	for _, setter := range setters {
+		setter(options)
+	}
+	return options
+}
+
 type Option func(options *Options)
 
 func defaultOptions() *Options {

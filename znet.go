@@ -33,11 +33,8 @@ type Engine struct {
 }
 
 // New returns a new eng instance
-func New(opts ...Option) Instance {
-	options := defaultOptions()
-	for _, setter := range opts {
-		setter(options)
-	}
+func New(setters ...Option) Instance {
+	options := completeOptions(setters...)
 
 	return &Engine{
 		options: options,
