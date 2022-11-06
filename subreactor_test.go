@@ -48,8 +48,8 @@ func TestSubReactor_OfferAndPolling(t *testing.T) {
 	sub.RegisterConnection(NewConnection(nil, 1))
 
 	stop := make(chan struct{})
-	go sub.Polling(stop, func(conn *Connection) {
-		log.Println(conn.ID())
+	go sub.Polling(stop, func(fd int) {
+		log.Println(fd)
 	})
 
 	sub.Offer(1, 2, 3)

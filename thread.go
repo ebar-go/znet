@@ -40,8 +40,8 @@ func (e *Thread) Use(handler ...HandleFunc) {
 	e.handleChains = append(e.handleChains, handler...)
 }
 
-// HandleRequest handle new request for connection
-func (e *Thread) HandleRequest(conn *Connection) {
+// onRequest handle new request for connection
+func (e *Thread) onRequest(conn *Connection) {
 	// start schedule task
 	e.worker.Schedule(func() {
 		defer runtime.HandleCrash()
@@ -51,7 +51,10 @@ func (e *Thread) HandleRequest(conn *Connection) {
 			err error
 		)
 
-		if conn.protocol == internal.TCP {
+		if conn.protocol == internal.WEBSOCKET {
+			// read websocket request message
+			msg, err = wsutil.ReadClientBinary(conn.instance)
+		} else {
 			var n int
 			// get bytes from pool, and release after processed
 			bytes := pool.GetByte(e.options.MaxReadBufferSize)
@@ -61,10 +64,6 @@ func (e *Thread) HandleRequest(conn *Connection) {
 			if err == nil {
 				msg = bytes[:n]
 			}
-
-		} else {
-			// read websocket request message
-			msg, err = wsutil.ReadClientBinary(conn.instance)
 		}
 
 		if err != nil {

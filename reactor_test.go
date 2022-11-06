@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-func TestNewMainReactor(t *testing.T) {
+func TestNewReactor(t *testing.T) {
 	reactor, err := NewReactor(defaultReactorOptions())
 
 	assert.Nil(t, err)
 	assert.NotNil(t, reactor)
 }
 
-func TestMainReactor_Run(t *testing.T) {
+func TestReactor_Run(t *testing.T) {
 	reactor, err := NewReactor(defaultReactorOptions())
 
 	assert.Nil(t, err)

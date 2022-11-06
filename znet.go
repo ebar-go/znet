@@ -6,6 +6,7 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
 	"log"
+	"net"
 )
 
 // Instance represents an eng interface
@@ -27,8 +28,8 @@ type Engine struct {
 	options *Options          // options for the event loop
 	schemas []internal.Schema // schema for acceptors
 	router  *Router           // router for handlers
-	reactor *Reactor
-	thread  *Thread
+	reactor *Reactor          // reactor model
+	thread  *Thread           //
 }
 
 // New returns a new eng instance
@@ -40,7 +41,7 @@ func New(opts ...Option) Instance {
 
 	return &Engine{
 		options: options,
-		reactor: options.NewReactor(),
+		reactor: options.NewReactorOrDie(),
 		router:  options.NewRouter(),
 		thread:  options.NewThread(),
 	}
@@ -90,7 +91,14 @@ func (eng *Engine) runSchemas(ctx context.Context) error {
 	// prepare servers
 	for _, schema := range eng.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(ctx.Done(), eng.reactor.onConnect); err != nil {
+		if err := schema.Listen(ctx.Done(), func(conn net.Conn, protocol string) {
+			// this callback will be invoked when the connection is established
+
+			// create instance of Connection
+			connection := NewConnection(conn, eng.reactor.poll.SocketFD(conn)).withProtocol(protocol)
+			// initialize this new connection by reactor
+			eng.reactor.initializeConnection(connection)
+		}); err != nil {
 			return err
 		}
 
@@ -107,7 +115,7 @@ func (eng *Engine) runReactor(ctx context.Context) {
 
 	go func() {
 		defer runtime.HandleCrash()
-		eng.reactor.Run(ctx.Done(), eng.thread.HandleRequest)
+		eng.reactor.Run(ctx.Done(), eng.thread.onRequest)
 	}()
 }
 
