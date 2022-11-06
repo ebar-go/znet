@@ -1,16 +1,16 @@
 # znet
 golang powerful network framework
 
-- Engine Start Sequence Diagram   
-![Sequence Diagram](http://assets.processon.com/chart_image/6367a4755653bb5ba365c2ab.png?3)
-
 
 ## Features
 - High-performance Event-Loop under multi-threads model
 - Supporting multiple protocols: TCP,Websocket
-- Supporting two event-notification mechanisms: epoll in Linux/Windows and kqueue in FreeBSD
+- Supporting reactor event-notification mechanisms: epoll in Linux/Windows and kqueue in FreeBSD
 - Supporting safe goroutines worker pool
 - Supporting two contentType: JSON/Protobuf 
+- Supporting router service for different operate and handle functions
+
+
 
 ## Quick start
 - install
@@ -106,6 +106,14 @@ func main() {
 	<-ctx.Done()
 }
 ```
+
+
+## Architecture
+- Framework
+  ![Framework](http://assets.processon.com/chart_image/62b3d00e637689074ac74fb3.png?1)
+- Engine Start Sequence Diagram   
+  ![Sequence Diagram](http://assets.processon.com/chart_image/6367a4755653bb5ba365c2ab.png?3)
+
 
 ## Protocol
 - We design the protocol for solve TCP sticky packet problem
