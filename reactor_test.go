@@ -7,14 +7,14 @@ import (
 )
 
 func TestNewMainReactor(t *testing.T) {
-	reactor, err := NewMainReactor(defaultReactorOptions())
+	reactor, err := NewReactor(defaultReactorOptions())
 
 	assert.Nil(t, err)
 	assert.NotNil(t, reactor)
 }
 
 func TestMainReactor_Run(t *testing.T) {
-	reactor, err := NewMainReactor(defaultReactorOptions())
+	reactor, err := NewReactor(defaultReactorOptions())
 
 	assert.Nil(t, err)
 

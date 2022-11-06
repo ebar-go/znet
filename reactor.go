@@ -8,16 +8,16 @@ import (
 	"net"
 )
 
-// MainReactor represents the epoll model for listen connections.
-type MainReactor struct {
+// Reactor represents the epoll model for listen connections.
+type Reactor struct {
 	options  ReactorOptions
 	poll     poller.Poller // use to listen active connections
 	sub      SubReactor    // manage connections
 	callback *Callback     // manage connections events
 }
 
-// Run runs the MainReactor with the given signal.
-func (reactor *MainReactor) Run(stopCh <-chan struct{}, handler ConnectionHandler) {
+// Run runs the Reactor with the given signal.
+func (reactor *Reactor) Run(stopCh <-chan struct{}, handler ConnectionHandler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// cancel context when the given signal is closed
 	defer cancel()
@@ -31,7 +31,7 @@ func (reactor *MainReactor) Run(stopCh <-chan struct{}, handler ConnectionHandle
 }
 
 // run receive active connection file descriptor and offer to thread
-func (reactor *MainReactor) run(stopCh <-chan struct{}) {
+func (reactor *Reactor) run(stopCh <-chan struct{}) {
 	for {
 		select {
 		case <-stopCh:
@@ -54,7 +54,7 @@ func (reactor *MainReactor) run(stopCh <-chan struct{}) {
 }
 
 // onConnect is called when the connection is established
-func (reactor *MainReactor) onConnect(conn net.Conn, protocol string) {
+func (reactor *Reactor) onConnect(conn net.Conn, protocol string) {
 	connection := NewConnection(conn, reactor.poll.SocketFD(conn)).withProtocol(protocol)
 	if err := reactor.poll.Add(connection.fd); err != nil {
 		connection.Close()
@@ -73,14 +73,14 @@ func (reactor *MainReactor) onConnect(conn net.Conn, protocol string) {
 	reactor.callback.OnConnect(connection)
 }
 
-// NewMainReactor return a new main reactor instance
-func NewMainReactor(options ReactorOptions) (*MainReactor, error) {
+// NewReactor return a new main reactor instance
+func NewReactor(options ReactorOptions) (*Reactor, error) {
 	poll, err := poller.NewPollerWithBuffer(options.EpollBufferSize)
 	if err != nil {
 		return nil, err
 	}
 
-	reactor := &MainReactor{
+	reactor := &Reactor{
 		options: options,
 		poll:    poll,
 	}

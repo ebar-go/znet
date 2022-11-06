@@ -27,7 +27,7 @@ type Engine struct {
 	options *Options          // options for the event loop
 	schemas []internal.Schema // schema for acceptors
 	router  *Router           // router for handlers
-	main    *MainReactor
+	reactor *Reactor
 	thread  *Thread
 }
 
@@ -40,7 +40,7 @@ func New(opts ...Option) Instance {
 
 	return &Engine{
 		options: options,
-		main:    options.NewMainReactor(),
+		reactor: options.NewReactor(),
 		router:  options.NewRouter(),
 		thread:  options.NewThread(),
 	}
@@ -90,7 +90,7 @@ func (eng *Engine) runSchemas(ctx context.Context) error {
 	// prepare servers
 	for _, schema := range eng.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(ctx.Done(), eng.main.onConnect); err != nil {
+		if err := schema.Listen(ctx.Done(), eng.reactor.onConnect); err != nil {
 			return err
 		}
 
@@ -107,7 +107,7 @@ func (eng *Engine) runReactor(ctx context.Context) {
 
 	go func() {
 		defer runtime.HandleCrash()
-		eng.main.Run(ctx.Done(), eng.thread.HandleRequest)
+		eng.reactor.Run(ctx.Done(), eng.thread.HandleRequest)
 	}()
 }
 

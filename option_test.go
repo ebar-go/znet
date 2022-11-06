@@ -6,7 +6,7 @@ import (
 )
 
 func TestOptions_NewMainReactor(t *testing.T) {
-	reactor := defaultOptions().NewMainReactor()
+	reactor := defaultOptions().NewReactor()
 	assert.NotNil(t, reactor)
 }
 

@@ -47,8 +47,8 @@ type ReactorOptions struct {
 	SubReactorShardCount int
 }
 
-func (options *Options) NewMainReactor() *MainReactor {
-	reactor, err := NewMainReactor(options.Reactor)
+func (options *Options) NewReactor() *Reactor {
+	reactor, err := NewReactor(options.Reactor)
 	if err != nil {
 		panic(err)
 	}
