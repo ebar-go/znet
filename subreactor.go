@@ -50,6 +50,10 @@ func (sub *SingleSubReactor) Polling(stopCh <-chan struct{}, callback func(int))
 	})
 }
 
+func (sub *SingleSubReactor) PushMessage(conn *Connection, msg []byte) {
+
+}
+
 // NewSingleSubReactor creates an instance of a SingleSubReactor
 func NewSingleSubReactor(bufferSize int) *SingleSubReactor {
 	return &SingleSubReactor{

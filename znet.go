@@ -69,22 +69,29 @@ func (eng *Engine) Run(stopCh <-chan struct{}) error {
 		return errors.New("please listen one protocol at least")
 	}
 
-	// prepare servers
+	// compose work flow functions
+	// decode request -> compute request -> encode response
+	eng.thread.Use(eng.thread.decode(eng.router.handleError))
+	eng.thread.Use(eng.options.Middlewares...)
+	eng.thread.Use(eng.thread.compute(eng.router.handleRequest), eng.thread.encode(eng.router.handleError))
+
+	// start listeners
 	schemaCtx, schemeCancel := context.WithCancel(ctx)
 	defer schemeCancel()
-	if err := eng.runSchemas(schemaCtx); err != nil {
+	if err := eng.startListenSchemas(schemaCtx); err != nil {
 		return err
 	}
 
+	// start reactor
 	reactorCtx, reactorCancel := context.WithCancel(ctx)
 	defer reactorCancel()
-	eng.runReactor(reactorCtx)
+	eng.startEventLoop(reactorCtx)
 
 	runtime.WaitClose(stopCh, eng.shutdown)
 	return nil
 }
 
-func (eng *Engine) runSchemas(ctx context.Context) error {
+func (eng *Engine) startListenSchemas(ctx context.Context) error {
 	// prepare servers
 	for _, schema := range eng.schemas {
 		// listen with context and connection register callback function
@@ -104,12 +111,7 @@ func (eng *Engine) runSchemas(ctx context.Context) error {
 	return nil
 }
 
-func (eng *Engine) runReactor(ctx context.Context) {
-	// decode request -> compute request -> encode response
-	eng.thread.Use(eng.thread.decode(eng.router.handleError))
-	eng.thread.Use(eng.options.Middlewares...)
-	eng.thread.Use(eng.thread.compute(eng.router.handleRequest), eng.thread.encode(eng.router.handleError))
-
+func (eng *Engine) startEventLoop(ctx context.Context) {
 	go func() {
 		defer runtime.HandleCrash()
 		eng.reactor.Run(ctx.Done(), eng.thread.onRequest)
