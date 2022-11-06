@@ -1,6 +1,10 @@
 # znet
 golang powerful network framework
 
+- Engine Start Sequence Diagram   
+![Sequence Diagram](http://assets.processon.com/chart_image/6367a4755653bb5ba365c2ab.png?3)
+
+
 ## Features
 - High-performance Event-Loop under multi-threads model
 - Supporting multiple protocols: TCP,Websocket
