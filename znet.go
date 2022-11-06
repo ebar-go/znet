@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-// Instance represents an el interface
+// Instance represents an eng interface
 type Instance interface {
 	// Router return the router instance
 	Router() *Router
@@ -23,8 +23,7 @@ type Instance interface {
 	Run(stopCh <-chan struct{}) error
 }
 
-// EventLoop represents im framework public access api.
-type EventLoop struct {
+type Engine struct {
 	options *Options          // options for the event loop
 	schemas []internal.Schema // schema for acceptors
 	router  *Router           // router for handlers
@@ -32,14 +31,14 @@ type EventLoop struct {
 	thread  *Thread
 }
 
-// New returns a new el instance
+// New returns a new eng instance
 func New(opts ...Option) Instance {
 	options := defaultOptions()
 	for _, setter := range opts {
 		setter(options)
 	}
 
-	return &EventLoop{
+	return &Engine{
 		options: options,
 		main:    options.NewMainReactor(),
 		router:  options.NewRouter(),
@@ -48,50 +47,50 @@ func New(opts ...Option) Instance {
 }
 
 // ListenTCP listens for tcp connections
-func (el *EventLoop) ListenTCP(addr string) {
-	el.schemas = append(el.schemas, internal.NewSchema(internal.TCP, addr))
+func (eng *Engine) ListenTCP(addr string) {
+	eng.schemas = append(eng.schemas, internal.NewSchema(internal.TCP, addr))
 }
 
 // ListenWebsocket listens for websocket connections
-func (el *EventLoop) ListenWebsocket(addr string) {
-	el.schemas = append(el.schemas, internal.NewSchema(internal.WEBSOCKET, addr))
+func (eng *Engine) ListenWebsocket(addr string) {
+	eng.schemas = append(eng.schemas, internal.NewSchema(internal.WEBSOCKET, addr))
 }
 
 // Router return instance of Router
-func (el *EventLoop) Router() *Router {
-	return el.router
+func (eng *Engine) Router() *Router {
+	return eng.router
 }
 
 // Run starts the event-loop
-func (el *EventLoop) Run(stopCh <-chan struct{}) error {
-	if err := el.options.Validate(); err != nil {
+func (eng *Engine) Run(stopCh <-chan struct{}) error {
+	if err := eng.options.Validate(); err != nil {
 		return err
 	}
 	ctx := context.Background()
-	if len(el.schemas) == 0 {
+	if len(eng.schemas) == 0 {
 		return errors.New("please listen one protocol at least")
 	}
 
 	// prepare servers
 	schemaCtx, schemeCancel := context.WithCancel(ctx)
 	defer schemeCancel()
-	if err := el.runSchemas(schemaCtx); err != nil {
+	if err := eng.runSchemas(schemaCtx); err != nil {
 		return err
 	}
 
 	reactorCtx, reactorCancel := context.WithCancel(ctx)
 	defer reactorCancel()
-	el.runReactor(reactorCtx)
+	eng.runReactor(reactorCtx)
 
-	runtime.WaitClose(stopCh, el.shutdown)
+	runtime.WaitClose(stopCh, eng.shutdown)
 	return nil
 }
 
-func (el *EventLoop) runSchemas(ctx context.Context) error {
+func (eng *Engine) runSchemas(ctx context.Context) error {
 	// prepare servers
-	for _, schema := range el.schemas {
+	for _, schema := range eng.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(ctx.Done(), el.main.onConnect); err != nil {
+		if err := schema.Listen(ctx.Done(), eng.main.onConnect); err != nil {
 			return err
 		}
 
@@ -100,18 +99,18 @@ func (el *EventLoop) runSchemas(ctx context.Context) error {
 	return nil
 }
 
-func (el *EventLoop) runReactor(ctx context.Context) {
+func (eng *Engine) runReactor(ctx context.Context) {
 	// decode request -> compute request -> encode response
-	el.thread.Use(el.thread.decode(el.router.handleError))
-	el.thread.Use(el.options.Middlewares...)
-	el.thread.Use(el.thread.compute(el.router.handleRequest), el.thread.encode(el.router.handleError))
+	eng.thread.Use(eng.thread.decode(eng.router.handleError))
+	eng.thread.Use(eng.options.Middlewares...)
+	eng.thread.Use(eng.thread.compute(eng.router.handleRequest), eng.thread.encode(eng.router.handleError))
 
 	go func() {
 		defer runtime.HandleCrash()
-		el.main.Run(ctx.Done(), el.thread.HandleRequest)
+		eng.main.Run(ctx.Done(), eng.thread.HandleRequest)
 	}()
 }
 
-func (el *EventLoop) shutdown() {
+func (eng *Engine) shutdown() {
 	log.Println("server shutdown complete")
 }
