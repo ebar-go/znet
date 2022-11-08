@@ -77,6 +77,7 @@ func (e *Epoll) Remove(fd int) error {
 }
 
 func (e *Epoll) Wait() ([]int, error) {
+	// it will trigger many times when connection send new data
 	n := C.epoll_wait(e.fd, &e.events[0], 128, -1)
 	if n == -1 {
 		return nil, errors.New("Wait err")
@@ -85,14 +86,7 @@ func (e *Epoll) Wait() ([]int, error) {
 	var connections = e.buffer[:0]
 	e.lock.RLock()
 	for i := 0; i < int(n); i++ {
-		if e.events[i].events == 0 {
-			continue
-		}
 		fd := C.get_epoll_event(e.events[i])
-		if fd == 0 {
-			continue
-		}
-
 		connections = append(connections, int(fd))
 	}
 	e.lock.RUnlock()
