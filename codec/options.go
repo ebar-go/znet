@@ -7,16 +7,13 @@ import (
 
 // Options represents codec options
 type Options struct {
-	// ContentType is data content type
-	ContentType int
-
 	endian binary.Endian
 
 	headerSize, headerOffset             int
 	packetLengthSize, packetLengthOffset int
 	operateSize, operateOffset           int
-	contentTypeSize, contentTypeOffset   int
 	seqSize, seqOffset                   int
+	optionSize, optionOffset             int
 }
 
 func (options *Options) complete() {
@@ -24,8 +21,8 @@ func (options *Options) complete() {
 	options.headerOffset = options.headerSize
 	options.packetLengthOffset = 0 + options.packetLengthSize
 	options.operateOffset = options.packetLengthOffset + options.operateSize
-	options.contentTypeOffset = options.operateOffset + options.contentTypeSize
-	options.seqOffset = options.contentTypeOffset + options.seqSize
+	options.seqOffset = options.operateOffset + options.seqSize
+	options.optionOffset = options.seqOffset + options.optionSize
 }
 
 func (options *Options) New() Codec {
@@ -44,12 +41,11 @@ type Option func(options *Options)
 // |     4      |   2   |      2    | 2 |          n           |
 func defaultOptions() *Options {
 	return &Options{
-		ContentType:      ContentTypeJSON,
 		headerSize:       10,
 		packetLengthSize: 4,
 		operateSize:      2,
-		contentTypeSize:  2,
 		seqSize:          2,
+		optionSize:       2,
 	}
 }
 

@@ -7,14 +7,17 @@ import (
 )
 
 const (
-	ContentTypeJSON     = 1
-	ContentTypeProtobuf = 2
+	OptionContentTypeJson = 1 << 1
 )
 
 type Header struct {
-	Operate     int16
-	ContentType int16
-	Seq         int16
+	Operate int16
+	Seq     int16
+	Options int16
+}
+
+func (header *Header) IsContentTypeJson() bool {
+	return header.Operate&OptionContentTypeJson == OptionContentTypeJson
 }
 
 type Codec interface {
@@ -44,8 +47,9 @@ func (codec *DefaultCodec) Pack(data any) ([]byte, error) {
 	endian := codec.options.endian
 	endian.PutInt32(buf[0:codec.options.packetLengthOffset], int32(length))
 	endian.PutInt16(buf[codec.options.packetLengthOffset:codec.options.operateOffset], codec.header.Operate)
-	endian.PutInt16(buf[codec.options.operateOffset:codec.options.contentTypeOffset], codec.header.ContentType)
-	endian.PutInt16(buf[codec.options.contentTypeOffset:codec.options.seqOffset], codec.header.Seq)
+	endian.PutInt16(buf[codec.options.operateOffset:codec.options.seqOffset], codec.header.Seq)
+	endian.PutInt16(buf[codec.options.seqOffset:codec.options.optionOffset], codec.header.Options)
+
 	endian.PutString(buf[codec.options.headerSize:], string(body))
 	return buf, nil
 }
@@ -57,8 +61,8 @@ func (codec *DefaultCodec) Decode(msg []byte) error {
 	endian := codec.options.endian
 	length := int(endian.Int32(msg[0:codec.options.packetLengthOffset]))
 	codec.header.Operate = endian.Int16(msg[codec.options.packetLengthOffset:codec.options.operateOffset])
-	codec.header.ContentType = endian.Int16(msg[codec.options.operateOffset:codec.options.contentTypeOffset])
-	codec.header.Seq = endian.Int16(msg[codec.options.contentTypeOffset:codec.options.seqOffset])
+	codec.header.Seq = endian.Int16(msg[codec.options.operateOffset:codec.options.seqOffset])
+	codec.header.Options = endian.Int16(msg[codec.options.operateOffset:codec.options.optionOffset])
 
 	if length != len(msg) {
 		return errors.New("unexpected packet length")
@@ -69,18 +73,15 @@ func (codec *DefaultCodec) Decode(msg []byte) error {
 }
 
 func (codec *DefaultCodec) Unpack(data any) error {
-	if codec.header.ContentType == ContentTypeJSON {
+	if codec.header.IsContentTypeJson() {
 		return json.Unmarshal(codec.body, data)
-	} else if codec.header.ContentType == ContentTypeProtobuf {
-		message, ok := data.(proto.Message)
-		if !ok {
-			return errors.New("unsupported proto object")
-		}
-
-		return proto.Unmarshal(codec.body, message)
+	}
+	message, ok := data.(proto.Message)
+	if !ok {
+		return errors.New("unsupported proto object")
 	}
 
-	return errors.New("unsupported content type")
+	return proto.Unmarshal(codec.body, message)
 }
 
 func (codec *DefaultCodec) Header() Header {
@@ -89,16 +90,13 @@ func (codec *DefaultCodec) Header() Header {
 
 // marshal the given data into body by content type
 func (codec *DefaultCodec) marshal(data any) ([]byte, error) {
-	if codec.header.ContentType == ContentTypeJSON {
+	if codec.header.IsContentTypeJson() {
 		return json.Marshal(data)
-	} else if codec.header.ContentType == ContentTypeProtobuf {
-		message, ok := data.(proto.Message)
-		if !ok {
-			return nil, errors.New("unsupported proto object")
-		}
-
-		return proto.Marshal(message)
+	}
+	message, ok := data.(proto.Message)
+	if !ok {
+		return nil, errors.New("unsupported proto object")
 	}
 
-	return nil, errors.New("unsupported content type")
+	return proto.Marshal(message)
 }
