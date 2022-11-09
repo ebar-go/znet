@@ -34,7 +34,7 @@ func TestNew(t *testing.T) {
 	instance.ListenWebsocket(":8082")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
-		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Request()))
+		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body()))
 		return map[string]any{"val": "bar"}, nil
 	})
 	err := instance.Run(ctx.Done())
@@ -59,6 +59,11 @@ func TestClient(t *testing.T) {
 		}
 	}()
 
+	bytes, err := codec.Factory().NewWithHeader(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Pack(map[string]any{"key": "foo"})
+	if err != nil {
+		panic(err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	go func() {
@@ -66,11 +71,9 @@ func TestClient(t *testing.T) {
 			select {
 			case <-ctx.Done():
 			default:
-				bytes, err := codec.Factory().NewWithHeader(codec.Header{Operate: 1, ContentType: codec.ContentTypeJSON}).Pack(map[string]any{"key": "foo"})
-				if err != nil {
-					return
-				}
-				conn.Write(bytes)
+
+				n, err := conn.Write(bytes)
+				log.Println(n, err)
 				time.Sleep(time.Second)
 			}
 
@@ -124,7 +127,7 @@ func BenchmarkClient(b *testing.B) {
 		metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	}()
 
-	bytes, err := codec.Factory().New().Pack(map[string]any{"key": "foo"})
+	bytes, err := codec.Factory().NewWithHeader(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Pack(map[string]any{"key": "foo"})
 	if err != nil {
 		return
 	}

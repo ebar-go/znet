@@ -15,7 +15,7 @@ type Action[Request, Response any] func(ctx *Context, request *Request) (*Respon
 func StandardHandler[Request, Response any](action Action[Request, Response]) Handler {
 	return func(ctx *Context) (any, error) {
 		request := new(Request)
-		if err := ctx.codec.Unpack(request); err != nil {
+		if err := ctx.Packet().Unpack(request); err != nil {
 			return nil, err
 		}
 		return action(ctx, request)
@@ -57,7 +57,7 @@ func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
 
 func (router *Router) handleRequest(ctx *Context) {
 	// match handler
-	handler, ok := router.handlers.Get(ctx.codec.Header().Operate)
+	handler, ok := router.handlers.Get(ctx.Packet().Header().Operate)
 	if !ok {
 		router.handleNotFound(ctx)
 		ctx.Abort()

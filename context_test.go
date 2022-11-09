@@ -1,16 +1,13 @@
 package znet
 
 import (
-	"context"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
 )
 
 func TestContext_Request(t *testing.T) {
-	request := []byte("foo")
-	ctx := &Context{request: request}
-	assert.Equal(t, request, ctx.Request())
+
 }
 
 func TestContext_Conn(t *testing.T) {
@@ -49,13 +46,5 @@ func TestContext_Abort(t *testing.T) {
 }
 
 func TestContext_reset(t *testing.T) {
-	engine := NewThread(defaultThreadOptions())
-	ctx := &Context{
-		conn:    NewConnection(nil, 1),
-		thread:  engine,
-		Context: context.Background(),
-		index:   1,
-	}
 
-	ctx.reset(NewConnection(nil, 2), []byte("bar"))
 }

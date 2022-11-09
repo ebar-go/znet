@@ -1,12 +1,12 @@
 package znet
 
 import (
-	"errors"
-	"github.com/ebar-go/ego/utils/binary"
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
+	"github.com/ebar-go/znet/codec"
 	"github.com/ebar-go/znet/internal"
 	"github.com/gobwas/ws/wsutil"
+	"log"
 )
 
 // Thread represents context manager
@@ -18,7 +18,7 @@ type Thread struct {
 	contextProvider internal.Provider[*Context] // is a pool for Context
 	worker          pool.Worker
 
-	endian binary.Endian
+	decoder codec.Decoder
 }
 
 // NewThread returns a new Thread instance
@@ -26,7 +26,7 @@ func NewThread(options ThreadOptions) *Thread {
 	engine := &Thread{
 		options: options,
 		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
-		endian:  binary.BigEndian(),
+		decoder: codec.NewDecoder(options.packetLengthSize),
 	}
 
 	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {
@@ -40,90 +40,69 @@ func (e *Thread) Use(handler ...HandleFunc) {
 	e.handleChains = append(e.handleChains, handler...)
 }
 
-// onRequest handle new request for connection
-func (e *Thread) onRequest(conn *Connection) {
+// HandleRequest handle new request for connection
+func (e *Thread) HandleRequest(conn *Connection) {
 	// start schedule task
 	e.worker.Schedule(func() {
 		defer runtime.HandleCrash()
 
-		var (
-			msg []byte
-			err error
-		)
-
-		if conn.protocol == internal.WEBSOCKET {
-			// read websocket request message
-			msg, err = wsutil.ReadClientBinary(conn.instance)
-		} else {
-			var n int
-			// get bytes from pool, and release after processed
-			bytes := pool.GetByte(e.options.MaxReadBufferSize)
-			defer pool.PutByte(bytes)
-
-			n, err = e.read(conn, bytes)
-			if err == nil {
-				msg = bytes[:n]
-			}
-		}
-
-		if err != nil {
-			conn.Close()
-			return
-		}
-
-		// acquire context from provider
-		ctx := e.contextProvider.Acquire()
-		defer e.contextProvider.Release(ctx)
-
-		ctx.reset(conn, msg)
-
-		e.invokeContextHandler(ctx, 0)
+		e.handleRequest(conn)
 	})
 }
 
 // ------------------------private methods------------------------
 
-func (e *Thread) read(conn *Connection, bytes []byte) (n int, err error) {
-	// read message
-	if e.options.packetLengthSize == 0 {
-		return conn.Read(bytes)
-	}
+func (e *Thread) handleRequest(conn *Connection) {
+	var (
+		msg []byte
+		err error
+	)
 
-	n, err = conn.Read(bytes[:e.options.packetLengthSize])
-	if err != nil {
-		return
-	}
-	packetLength := int(e.endian.Int32(bytes[:e.options.packetLengthSize]))
-	if packetLength < e.options.packetLengthSize || packetLength > len(bytes) {
-		// when connection is closed, first read packet length may be successfully, but connection has closed
-		err = errors.New("packet exceeded, connection may be closed")
-		return
-	}
-	_, err = conn.Read(bytes[e.options.packetLengthSize:packetLength])
-	n = packetLength
-	return
-}
+	// read message from connection
+	if conn.protocol == internal.WEBSOCKET {
+		// read websocket request message
+		msg, err = wsutil.ReadClientBinary(conn.instance)
+	} else {
+		var n int
+		// get bytes from pool, and release after processed
+		bytes := pool.GetByte(e.options.MaxReadBufferSize)
+		defer pool.PutByte(bytes)
 
-func (e *Thread) decode(errorHandler func(ctx *Context, err error)) HandleFunc {
-	return func(ctx *Context) {
-		err := ctx.codec.Decode(ctx.request)
-		if err != nil {
-			errorHandler(ctx, err)
-			ctx.Abort()
-			return
+		n, err = e.decoder.Decode(conn, bytes)
+		if err == nil {
+			msg = bytes[:n]
 		}
-		ctx.Next()
 	}
-}
 
-func (e *Thread) compute(handler HandleFunc) HandleFunc {
-	return handler
+	// close the connection when read failed
+	if err != nil {
+		//log.Printf("[%s] read: %v\n", conn.ID(), err)
+		conn.Close()
+		return
+	}
+
+	// close the connection when decode msg failed
+	packet, err := codec.Factory().NewPacket(msg)
+	if err != nil {
+		log.Printf("[%s] decode: %v\n", conn.ID(), err)
+		conn.Close()
+		return
+	}
+
+	// compute
+	// acquire context from provider
+	ctx := e.contextProvider.Acquire()
+	defer e.contextProvider.Release(ctx)
+
+	ctx.reset(conn, packet)
+
+	e.invokeContextHandler(ctx, 0)
 }
 
 func (e *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 	return func(ctx *Context) {
 		// pack response
-		msg, err := ctx.codec.Pack(ctx.response)
+		msg, err := ctx.Packet().Pack(ctx.response)
 		if err != nil {
 			errorHandler(ctx, err)
 			return

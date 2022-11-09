@@ -1,102 +1,98 @@
 package codec
 
 import (
-	"encoding/json"
 	"errors"
-	"google.golang.org/protobuf/proto"
+	"github.com/ebar-go/ego/utils/binary"
+	"sync"
 )
 
-const (
-	OptionContentTypeJson = 1 << 1
-)
+// Codec represents codec codec
+type Codec struct {
+	endian binary.Endian
 
-type Header struct {
-	Operate int16
-	Seq     int16
-	Options int16
+	headerSize, headerOffset             int
+	packetLengthSize, packetLengthOffset int
+	operateSize, operateOffset           int
+	seqSize, seqOffset                   int
+	optionSize, optionOffset             int
 }
 
-func (header *Header) IsContentTypeJson() bool {
-	return header.Operate&OptionContentTypeJson == OptionContentTypeJson
+func (codec *Codec) complete() {
+	codec.headerOffset = codec.headerSize
+	codec.packetLengthOffset = 0 + codec.packetLengthSize
+	codec.operateOffset = codec.packetLengthOffset + codec.operateSize
+	codec.seqOffset = codec.operateOffset + codec.seqSize
+	codec.optionOffset = codec.seqOffset + codec.optionSize
 }
 
-type Codec interface {
-	Decode(msg []byte) error
-	Pack(data any) ([]byte, error)
-	Unpack(data any) error
-	Header() Header
-}
-
-type DefaultCodec struct {
-	options *Options
-
-	header Header
-	body   []byte
-}
-
-func (codec *DefaultCodec) Pack(data any) ([]byte, error) {
-	body, err := codec.marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
+func (codec *Codec) Encode(packet *Packet) ([]byte, error) {
 	// packet header and body
-	length := len(body) + codec.options.headerSize
+	length := len(packet.body) + codec.headerSize
 	buf := make([]byte, length)
 
-	endian := codec.options.endian
-	endian.PutInt32(buf[0:codec.options.packetLengthOffset], int32(length))
-	endian.PutInt16(buf[codec.options.packetLengthOffset:codec.options.operateOffset], codec.header.Operate)
-	endian.PutInt16(buf[codec.options.operateOffset:codec.options.seqOffset], codec.header.Seq)
-	endian.PutInt16(buf[codec.options.seqOffset:codec.options.optionOffset], codec.header.Options)
+	endian := codec.endian
+	endian.PutInt32(buf[0:codec.packetLengthOffset], int32(length))
+	endian.PutInt16(buf[codec.packetLengthOffset:codec.operateOffset], packet.header.Operate)
+	endian.PutInt16(buf[codec.operateOffset:codec.seqOffset], packet.header.Seq)
+	endian.PutInt16(buf[codec.seqOffset:codec.optionOffset], packet.header.Options)
 
-	endian.PutString(buf[codec.options.headerSize:], string(body))
+	copy(buf[codec.headerSize:], packet.body)
 	return buf, nil
 }
 
-func (codec *DefaultCodec) Decode(msg []byte) error {
-	if len(msg) < codec.options.headerSize {
+func (codec *Codec) Decode(packet *Packet, msg []byte) (err error) {
+	if len(msg) < codec.headerSize {
 		return errors.New("unexpected message")
 	}
-	endian := codec.options.endian
-	length := int(endian.Int32(msg[0:codec.options.packetLengthOffset]))
-	codec.header.Operate = endian.Int16(msg[codec.options.packetLengthOffset:codec.options.operateOffset])
-	codec.header.Seq = endian.Int16(msg[codec.options.operateOffset:codec.options.seqOffset])
-	codec.header.Options = endian.Int16(msg[codec.options.operateOffset:codec.options.optionOffset])
+	packet.header.Operate = codec.endian.Int16(msg[codec.packetLengthOffset:codec.operateOffset])
+	packet.header.Seq = codec.endian.Int16(msg[codec.operateOffset:codec.seqOffset])
+	packet.header.Options = codec.endian.Int16(msg[codec.operateOffset:codec.optionOffset])
 
-	if length != len(msg) {
-		return errors.New("unexpected packet length")
-	}
-	codec.body = msg[codec.options.headerOffset:]
+	packet.body = msg[codec.headerOffset:]
 
-	return nil
+	return
 }
 
-func (codec *DefaultCodec) Unpack(data any) error {
-	if codec.header.IsContentTypeJson() {
-		return json.Unmarshal(codec.body, data)
-	}
-	message, ok := data.(proto.Message)
-	if !ok {
-		return errors.New("unsupported proto object")
-	}
-
-	return proto.Unmarshal(codec.body, message)
+func (codec *Codec) NewPacket(msg []byte) (*Packet, error) {
+	packet := &Packet{}
+	err := codec.Decode(packet, msg)
+	return packet, err
 }
 
-func (codec *DefaultCodec) Header() Header {
-	return codec.header
+func (codec *Codec) NewWithHeader(header Header) *Packet {
+	return &Packet{codec: codec, header: header}
 }
 
-// marshal the given data into body by content type
-func (codec *DefaultCodec) marshal(data any) ([]byte, error) {
-	if codec.header.IsContentTypeJson() {
-		return json.Marshal(data)
+// Default returns the default codec implementation,the packet is composed by :
+// |-------------- header ------------- |-------- body --------|
+// |packetLength|operate|contentType|seq|-------- body --------|
+// |     4      |   2   |      2    | 2 |          n           |
+func defaultCodec() *Codec {
+	return &Codec{
+		headerSize:       10,
+		packetLengthSize: 4,
+		operateSize:      2,
+		seqSize:          2,
+		optionSize:       2,
+		endian:           defaultEndian,
 	}
-	message, ok := data.(proto.Message)
-	if !ok {
-		return nil, errors.New("unsupported proto object")
-	}
+}
 
-	return proto.Marshal(message)
+var codecInstance = struct {
+	once     sync.Once
+	instance *Codec
+}{}
+
+func Factory() *Codec {
+	codecInstance.once.Do(func() {
+		codecInstance.instance = defaultCodec()
+		codecInstance.instance.complete()
+	})
+	return codecInstance.instance
+}
+
+var defaultEndian = binary.BigEndian()
+
+func SetEndian(endian binary.Endian) {
+	defaultEndian = endian
 }

@@ -22,18 +22,12 @@ type Context struct {
 	thread *Thread
 	conn   *Connection
 
-	codec    codec.Codec
-	request  []byte
+	packet   *codec.Packet
 	response any
 }
 
-// Request return the source request message
-func (ctx *Context) Request() []byte {
-	return ctx.request
-}
-
-func (ctx *Context) Header() codec.Header {
-	return ctx.codec.Header()
+func (ctx *Context) Packet() *codec.Packet {
+	return ctx.packet
 }
 
 // Conn return instance of Connection
@@ -56,11 +50,10 @@ func (ctx *Context) Abort() {
 }
 
 // reset clear the context properties
-func (ctx *Context) reset(conn *Connection, msg []byte) {
+func (ctx *Context) reset(conn *Connection, packet *codec.Packet) {
 	ctx.index = 0
 	ctx.conn = conn
 	ctx.Context = context.Background()
 	ctx.response = nil
-	ctx.request = msg
-	ctx.codec = codec.Factory().New()
+	ctx.packet = packet
 }
