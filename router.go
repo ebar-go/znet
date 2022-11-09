@@ -15,7 +15,7 @@ type Action[Request, Response any] func(ctx *Context, request *Request) (*Respon
 func StandardHandler[Request, Response any](action Action[Request, Response]) Handler {
 	return func(ctx *Context) (any, error) {
 		request := new(Request)
-		if err := ctx.Packet().Unpack(request); err != nil {
+		if err := ctx.Packet().Decode(request); err != nil {
 			return nil, err
 		}
 		return action(ctx, request)

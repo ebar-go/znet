@@ -34,7 +34,7 @@ func TestNew(t *testing.T) {
 	instance.ListenWebsocket(":8082")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
-		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body()))
+		//log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body()))
 		return map[string]any{"val": "bar"}, nil
 	})
 	err := instance.Run(ctx.Done())
@@ -59,7 +59,7 @@ func TestClient(t *testing.T) {
 		}
 	}()
 
-	bytes, err := codec.Factory().NewWithHeader(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Pack(map[string]any{"key": "foo"})
+	bytes, err := codec.Factory().NewPacket(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Encode(map[string]any{"key": "foo"})
 	if err != nil {
 		panic(err)
 	}
@@ -127,7 +127,7 @@ func BenchmarkClient(b *testing.B) {
 		metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	}()
 
-	bytes, err := codec.Factory().NewWithHeader(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Pack(map[string]any{"key": "foo"})
+	bytes, err := codec.Factory().NewPacket(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Encode(map[string]any{"key": "foo"})
 	if err != nil {
 		return
 	}

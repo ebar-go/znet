@@ -27,17 +27,17 @@ type Packet struct {
 	body   []byte
 }
 
-func (packet *Packet) Pack(data any) ([]byte, error) {
+func (packet *Packet) Encode(data any) ([]byte, error) {
 	body, err := packet.marshal(data)
 	if err != nil {
 		return nil, err
 	}
 
 	packet.body = body
-	return packet.codec.Encode(packet)
+	return packet.codec.Pack(packet)
 }
 
-func (packet *Packet) Unpack(data any) error {
+func (packet *Packet) Decode(data any) error {
 	if packet.header.IsContentTypeJson() {
 		return json.Unmarshal(packet.body, data)
 	}

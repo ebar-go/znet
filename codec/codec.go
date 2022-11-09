@@ -25,7 +25,7 @@ func (codec *Codec) complete() {
 	codec.optionOffset = codec.seqOffset + codec.optionSize
 }
 
-func (codec *Codec) Encode(packet *Packet) ([]byte, error) {
+func (codec *Codec) Pack(packet *Packet) ([]byte, error) {
 	// packet header and body
 	length := len(packet.body) + codec.headerSize
 	buf := make([]byte, length)
@@ -40,7 +40,7 @@ func (codec *Codec) Encode(packet *Packet) ([]byte, error) {
 	return buf, nil
 }
 
-func (codec *Codec) Decode(packet *Packet, msg []byte) (err error) {
+func (codec *Codec) Unpack(packet *Packet, msg []byte) (err error) {
 	if len(msg) < codec.headerSize {
 		return errors.New("unexpected message")
 	}
@@ -53,13 +53,13 @@ func (codec *Codec) Decode(packet *Packet, msg []byte) (err error) {
 	return
 }
 
-func (codec *Codec) NewPacket(msg []byte) (*Packet, error) {
+func (codec *Codec) UnpackPacket(msg []byte) (*Packet, error) {
 	packet := &Packet{}
-	err := codec.Decode(packet, msg)
+	err := codec.Unpack(packet, msg)
 	return packet, err
 }
 
-func (codec *Codec) NewWithHeader(header Header) *Packet {
+func (codec *Codec) NewPacket(header Header) *Packet {
 	return &Packet{codec: codec, header: header}
 }
 
@@ -69,12 +69,12 @@ func (codec *Codec) NewWithHeader(header Header) *Packet {
 // |     4      |   2   |      2    | 2 |          n           |
 func defaultCodec() *Codec {
 	return &Codec{
+		endian:           defaultEndian,
 		headerSize:       10,
 		packetLengthSize: 4,
 		operateSize:      2,
 		seqSize:          2,
 		optionSize:       2,
-		endian:           defaultEndian,
 	}
 }
 
