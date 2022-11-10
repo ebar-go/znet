@@ -43,10 +43,9 @@ func (e *Thread) Use(handler ...HandleFunc) {
 // HandleRequest handle new request for connection
 func (e *Thread) HandleRequest(conn *Connection) {
 	var (
-		bytes         []byte
-		msg           []byte
-		err           error
-		bytesFromPool bool
+		msg      []byte
+		err      error
+		callback = func() {}
 	)
 
 	// read message from connection
@@ -56,8 +55,10 @@ func (e *Thread) HandleRequest(conn *Connection) {
 	} else {
 		var n int
 		// get bytes from pool, and release after processed
-		bytes = pool.GetByte(e.options.MaxReadBufferSize)
-		bytesFromPool = true
+		bytes := pool.GetByte(e.options.MaxReadBufferSize)
+		callback = func() {
+			pool.PutByte(bytes)
+		}
 		n, err = e.decoder.Decode(conn, bytes)
 		if err == nil {
 			msg = bytes[:n]
@@ -68,15 +69,14 @@ func (e *Thread) HandleRequest(conn *Connection) {
 	if err != nil {
 		log.Printf("[%s] read: %v\n", conn.ID(), err)
 		conn.Close()
+		callback()
 		return
 	}
 
 	// start schedule task
 	e.worker.Schedule(func() {
 		defer runtime.HandleCrash()
-		if bytesFromPool {
-			defer pool.PutByte(bytes)
-		}
+		defer callback()
 		e.handleRequest(conn, msg)
 	})
 
