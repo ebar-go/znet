@@ -2,11 +2,11 @@ package znet
 
 import (
 	"github.com/ebar-go/ego/utils/pool"
+	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
 	"github.com/ebar-go/znet/internal"
 	"github.com/gobwas/ws/wsutil"
 	"log"
-	"time"
 )
 
 // Thread represents context manager
@@ -42,16 +42,11 @@ func (e *Thread) Use(handler ...HandleFunc) {
 
 // HandleRequest handle new request for connection
 func (e *Thread) HandleRequest(conn *Connection) {
-	// start schedule task
-	e.handleRequest(conn)
-}
-
-// ------------------------private methods------------------------
-
-func (e *Thread) handleRequest(conn *Connection) {
 	var (
-		msg []byte
-		err error
+		bytes         []byte
+		msg           []byte
+		err           error
+		bytesFromPool bool
 	)
 
 	// read message from connection
@@ -61,9 +56,8 @@ func (e *Thread) handleRequest(conn *Connection) {
 	} else {
 		var n int
 		// get bytes from pool, and release after processed
-		bytes := pool.GetByte(e.options.MaxReadBufferSize)
-		defer pool.PutByte(bytes)
-
+		bytes = pool.GetByte(e.options.MaxReadBufferSize)
+		bytesFromPool = true
 		n, err = e.decoder.Decode(conn, bytes)
 		if err == nil {
 			msg = bytes[:n]
@@ -72,11 +66,25 @@ func (e *Thread) handleRequest(conn *Connection) {
 
 	// close the connection when read failed
 	if err != nil {
-		log.Printf("[%s] %d, read: %v\n", conn.ID(), time.Now().UnixMicro(), err)
+		log.Printf("[%s] read: %v\n", conn.ID(), err)
 		conn.Close()
 		return
 	}
 
+	// start schedule task
+	e.worker.Schedule(func() {
+		defer runtime.HandleCrash()
+		if bytesFromPool {
+			defer pool.PutByte(bytes)
+		}
+		e.handleRequest(conn, msg)
+	})
+
+}
+
+// ------------------------private methods------------------------
+
+func (e *Thread) handleRequest(conn *Connection, msg []byte) {
 	// close the connection when decode msg failed
 	packet, err := codec.Factory().UnpackPacket(msg)
 	if err != nil {

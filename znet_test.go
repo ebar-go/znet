@@ -72,7 +72,7 @@ func TestClient(t *testing.T) {
 		for {
 			n, err := conn.Write(p)
 			log.Println(n, err)
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 10)
 		}
 	}()
 	select {}
