@@ -46,7 +46,7 @@ func (codec *Codec) Unpack(packet *Packet, msg []byte) (err error) {
 	}
 	packet.header.Operate = codec.endian.Int16(msg[codec.packetLengthOffset:codec.operateOffset])
 	packet.header.Seq = codec.endian.Int16(msg[codec.operateOffset:codec.seqOffset])
-	packet.header.Options = codec.endian.Int16(msg[codec.operateOffset:codec.optionOffset])
+	packet.header.Options = codec.endian.Int16(msg[codec.seqOffset:codec.optionOffset])
 
 	packet.body = msg[codec.headerOffset:]
 
@@ -54,7 +54,7 @@ func (codec *Codec) Unpack(packet *Packet, msg []byte) (err error) {
 }
 
 func (codec *Codec) UnpackPacket(msg []byte) (*Packet, error) {
-	packet := &Packet{}
+	packet := &Packet{codec: codec}
 	err := codec.Unpack(packet, msg)
 	return packet, err
 }

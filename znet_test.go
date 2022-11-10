@@ -23,7 +23,7 @@ func TestNew(t *testing.T) {
 			log.Printf("[%s] connected", conn.ID())
 		}
 		options.OnDisconnect = func(conn *Connection) {
-			log.Printf("[%s] disconnected", conn.ID())
+			log.Printf("[%s] disconnected:%d", conn.ID(), time.Now().UnixMicro())
 		}
 	})
 
@@ -34,7 +34,7 @@ func TestNew(t *testing.T) {
 	instance.ListenWebsocket(":8082")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
-		//log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body()))
+		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body()))
 		return map[string]any{"val": "bar"}, nil
 	})
 	err := instance.Run(ctx.Done())
@@ -43,43 +43,39 @@ func TestNew(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	conn, err := net.Dial("tcp", "localhost:8081")
+	dialer := net.Dialer{KeepAlive: -1}
+	conn, err := dialer.Dial("tcp", "localhost:8081")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+	decoder := codec.NewDecoder(4)
 
 	go func() {
 		for {
 			bytes := make([]byte, 512)
-			n, err := conn.Read(bytes)
+			n, err := decoder.Decode(conn, bytes)
 			if err != nil {
+				log.Println("read error", time.Now().UnixMicro(), err)
 				return
 			}
 			log.Println("receive response: ", string(bytes[:n]))
 		}
 	}()
 
-	bytes, err := codec.Factory().NewPacket(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Encode(map[string]any{"key": "foo"})
+	p, err := codec.Factory().NewPacket(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Encode(map[string]any{"key": "foo"})
 	if err != nil {
 		panic(err)
 	}
+	log.Printf("packet length=%d, bytes=%v, str=%s\n", len(p), p, string(p))
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
 	go func() {
 		for {
-			select {
-			case <-ctx.Done():
-			default:
-
-				n, err := conn.Write(bytes)
-				log.Println(n, err)
-				time.Sleep(time.Second)
-			}
-
+			n, err := conn.Write(p)
+			log.Println(n, err)
+			time.Sleep(time.Second)
 		}
 	}()
-	<-ctx.Done()
+	select {}
 }
 
 func BenchmarkClient(b *testing.B) {

@@ -2,11 +2,11 @@ package znet
 
 import (
 	"github.com/ebar-go/ego/utils/pool"
-	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
 	"github.com/ebar-go/znet/internal"
 	"github.com/gobwas/ws/wsutil"
 	"log"
+	"time"
 )
 
 // Thread represents context manager
@@ -43,11 +43,7 @@ func (e *Thread) Use(handler ...HandleFunc) {
 // HandleRequest handle new request for connection
 func (e *Thread) HandleRequest(conn *Connection) {
 	// start schedule task
-	e.worker.Schedule(func() {
-		defer runtime.HandleCrash()
-
-		e.handleRequest(conn)
-	})
+	e.handleRequest(conn)
 }
 
 // ------------------------private methods------------------------
@@ -76,7 +72,7 @@ func (e *Thread) handleRequest(conn *Connection) {
 
 	// close the connection when read failed
 	if err != nil {
-		//log.Printf("[%s] read: %v\n", conn.ID(), err)
+		log.Printf("[%s] %d, read: %v\n", conn.ID(), time.Now().UnixMicro(), err)
 		conn.Close()
 		return
 	}

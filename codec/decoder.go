@@ -22,7 +22,7 @@ func NewDecoder(packetLengthSize int) Decoder {
 }
 
 func (decoder *LineBasedFrameDecoder) Decode(reader io.Reader, bytes []byte) (n int, err error) {
-	n, err = reader.Read(bytes[:decoder.packetLengthSize])
+	n, err = io.ReadFull(reader, bytes[:decoder.packetLengthSize])
 	if err != nil {
 		return
 	}
@@ -32,7 +32,7 @@ func (decoder *LineBasedFrameDecoder) Decode(reader io.Reader, bytes []byte) (n 
 		err = errors.New("packet exceeded, connection may be closed")
 		return
 	}
-	_, err = reader.Read(bytes[decoder.packetLengthSize:packetLength])
+	_, err = io.ReadFull(reader, bytes[decoder.packetLengthSize:packetLength])
 	n = packetLength
 	return
 }
