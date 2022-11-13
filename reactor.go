@@ -9,7 +9,6 @@ import (
 
 // Reactor represents the epoll model for listen connections.
 type Reactor struct {
-	options  ReactorOptions
 	poll     poller.Poller // use to listen active connections
 	sub      SubReactor    // manage connections
 	callback *Callback     // manage connections events
@@ -23,13 +22,7 @@ func (reactor *Reactor) Run(stopCh <-chan struct{}, onRequest ConnectionHandler)
 	go func() {
 		defer runtime.HandleCrash()
 		// start sub reactor polling task with active connection handler
-		reactor.sub.Polling(ctx.Done(), func(active int) {
-			conn := reactor.sub.GetConnection(active)
-			if conn == nil {
-				return
-			}
-			onRequest(conn)
-		})
+		reactor.sub.Polling(ctx.Done(), reactor.wrapHandler(onRequest))
 	}()
 
 	for {
@@ -51,6 +44,16 @@ func (reactor *Reactor) Run(stopCh <-chan struct{}, onRequest ConnectionHandler)
 			// push the active connections to queue
 			reactor.sub.Offer(active...)
 		}
+	}
+}
+
+func (reactor *Reactor) wrapHandler(handler ConnectionHandler) func(active int) {
+	return func(active int) {
+		conn := reactor.sub.GetConnection(active)
+		if conn == nil {
+			return
+		}
+		handler(conn)
 	}
 }
 
@@ -85,9 +88,8 @@ func NewReactor(options ReactorOptions) (*Reactor, error) {
 	}
 
 	reactor := &Reactor{
-		options: options,
-		poll:    poll,
-		sub:     options.NewSubReactor(),
+		poll: poll,
+		sub:  options.NewSubReactor(),
 	}
 
 	return reactor, nil
