@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"context"
 	"errors"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
@@ -64,7 +63,6 @@ func (eng *Engine) Run(stopCh <-chan struct{}) error {
 	if err := eng.options.Validate(); err != nil {
 		return err
 	}
-	ctx := context.Background()
 	if len(eng.schemas) == 0 {
 		return errors.New("please listen one protocol at least")
 	}
@@ -75,26 +73,29 @@ func (eng *Engine) Run(stopCh <-chan struct{}) error {
 	eng.thread.Use(eng.router.handleRequest, eng.thread.encode(eng.router.handleError))
 
 	// start listeners
-	schemaCtx, schemeCancel := context.WithCancel(ctx)
-	defer schemeCancel()
-	if err := eng.startListenSchemas(schemaCtx); err != nil {
+	schemaSignal := make(chan struct{})
+	defer close(schemaSignal)
+	if err := eng.startListenSchemas(schemaSignal); err != nil {
 		return err
 	}
 
 	// start reactor
-	reactorCtx, reactorCancel := context.WithCancel(ctx)
-	defer reactorCancel()
-	eng.startEventLoop(reactorCtx)
+	reactorSignal := make(chan struct{})
+	defer close(reactorSignal)
+	go func() {
+		defer runtime.HandleCrash()
+		eng.startEventLoop(reactorSignal)
+	}()
 
 	runtime.WaitClose(stopCh, eng.shutdown)
 	return nil
 }
 
-func (eng *Engine) startListenSchemas(ctx context.Context) error {
+func (eng *Engine) startListenSchemas(signal <-chan struct{}) error {
 	// prepare servers
 	for _, schema := range eng.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(ctx.Done(), func(conn net.Conn, protocol string) {
+		if err := schema.Listen(signal, func(conn net.Conn, protocol string) {
 			// this callback will be invoked when the connection is established
 
 			// create instance of Connection
@@ -110,11 +111,8 @@ func (eng *Engine) startListenSchemas(ctx context.Context) error {
 	return nil
 }
 
-func (eng *Engine) startEventLoop(ctx context.Context) {
-	go func() {
-		defer runtime.HandleCrash()
-		eng.reactor.Run(ctx.Done(), eng.thread.HandleRequest)
-	}()
+func (eng *Engine) startEventLoop(signal <-chan struct{}) {
+	eng.reactor.Run(signal, eng.thread.HandleRequest)
 }
 
 func (eng *Engine) shutdown() {

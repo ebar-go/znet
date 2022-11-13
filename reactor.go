@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"context"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal/poller"
 	"log"
@@ -16,15 +15,24 @@ type Reactor struct {
 
 // Run runs the Reactor with the given signal.
 func (reactor *Reactor) Run(stopCh <-chan struct{}, onRequest ConnectionHandler) {
-	ctx, cancel := context.WithCancel(context.Background())
-	// cancel context when the given signal is closed
-	defer cancel()
+	subReactorSignal := make(chan struct{})
+	defer close(subReactorSignal)
 	go func() {
 		defer runtime.HandleCrash()
-		// start sub reactor polling task with active connection handler
-		reactor.sub.Polling(ctx.Done(), reactor.wrapHandler(onRequest))
+		reactor.sub.Polling(subReactorSignal, reactor.wrapHandler(onRequest))
 	}()
 
+	pollerSignal := make(chan struct{})
+	defer close(pollerSignal)
+	go func() {
+		defer runtime.HandleCrash()
+		reactor.listenPoller(pollerSignal)
+	}()
+
+	runtime.WaitClose(stopCh)
+}
+
+func (reactor *Reactor) listenPoller(stopCh <-chan struct{}) {
 	for {
 		select {
 		case <-stopCh:
