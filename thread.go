@@ -17,6 +17,7 @@ type Thread struct {
 	worker        pool.Worker
 
 	decoder codec.Decoder
+	codec   codec.Codec
 }
 
 // NewThread returns a new Thread instance
@@ -26,6 +27,7 @@ func NewThread(options ThreadOptions) *Thread {
 		worker:        pool.NewGoroutinePool(options.WorkerPoolSize),
 		decoder:       codec.NewDecoder(options.packetLengthSize),
 		contextEngine: NewContextEngine(),
+		codec:         codec.NewJsonCodec(),
 	}
 
 	return thread
@@ -47,18 +49,14 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 	// read message from connection
 	if conn.protocol == internal.WEBSOCKET {
 		// read websocket request message
-		msg, err = wsutil.ReadClientBinary(conn.instance)
-	} else {
-		var n int
-		// get bytes from pool, and release after processed
-		bytes := pool.GetByte(thread.options.MaxReadBufferSize)
-		callback = func() {
-			pool.PutByte(bytes)
-		}
-		n, err = thread.decoder.Decode(conn, bytes)
+		var bytes []byte
+		bytes, err = wsutil.ReadClientBinary(conn.instance)
 		if err == nil {
-			msg = bytes[:n]
+			msg, err = thread.decoder.DecodeBytes(bytes)
 		}
+
+	} else {
+		msg, err = thread.decoder.Decode(conn.instance)
 	}
 
 	// close the connection when read failed
@@ -74,7 +72,7 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 		defer runtime.HandleCrash()
 		defer callback()
 		// close the connection when decode msg failed
-		packet, err := codec.Factory().UnpackPacket(msg)
+		packet := thread.codec.Unpack(msg)
 		if err != nil {
 			log.Printf("[%s] decode: %v\n", conn.ID(), err)
 			conn.Close()
@@ -95,12 +93,12 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 func (thread *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 	return func(ctx *Context) {
 		// pack response
-		msg, err := ctx.Packet().Encode(ctx.response)
+		msg, err := thread.codec.Pack(ctx.packet)
 		if err != nil {
 			errorHandler(ctx, err)
 			return
 		}
 
-		ctx.Conn().Push(msg)
+		thread.decoder.Encode(ctx.Conn(), msg)
 	}
 }

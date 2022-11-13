@@ -34,7 +34,7 @@ func TestNew(t *testing.T) {
 	instance.ListenWebsocket(":8082")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
-		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body()))
+		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body))
 		return map[string]any{"val": "bar"}, nil
 	})
 	err := instance.Run(ctx.Done())
@@ -52,27 +52,30 @@ func TestClient(t *testing.T) {
 
 	go func() {
 		for {
-			bytes := make([]byte, 512)
-			n, err := decoder.Decode(conn, bytes)
+			bytes, err := decoder.Decode(conn)
 			if err != nil {
 				log.Println("read error", time.Now().UnixMicro(), err)
 				return
 			}
-			log.Println("receive response: ", string(bytes[:n]))
+			log.Println("receive response: ", string(bytes))
 		}
 	}()
 
-	p, err := codec.Factory().NewPacket(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Encode(map[string]any{"key": "foo"})
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("packet length=%d, bytes=%v, str=%s\n", len(p), p, string(p))
+	cc := codec.NewJsonCodec()
+
+	packet := codec.NewPacket(cc)
+	packet.Action = 1
+
+	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
+	p, _ := cc.Pack(packet)
+
+	log.Printf("packet length=%d, str=%s\n", len(p), string(p))
 
 	go func() {
 		for {
-			n, err := conn.Write(p)
+			n, err := decoder.Encode(conn, p)
 			log.Println(n, err)
-			time.Sleep(time.Millisecond * 10)
+			time.Sleep(time.Second * 3)
 		}
 	}()
 	select {}
@@ -123,11 +126,13 @@ func BenchmarkClient(b *testing.B) {
 		metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	}()
 
-	bytes, err := codec.Factory().NewPacket(codec.Header{Operate: 1, Options: codec.OptionContentTypeJson}).Encode(map[string]any{"key": "foo"})
-	if err != nil {
-		return
-	}
+	cc := codec.NewJsonCodec()
 
+	packet := codec.NewPacket(cc)
+	packet.Action = 1
+
+	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
+	bytes, _ := cc.Pack(packet)
 	b.ResetTimer()
 	for i := 0; i < 100; i++ {
 		go func() {
