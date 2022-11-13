@@ -13,35 +13,31 @@ import (
 type Thread struct {
 	options ThreadOptions
 
-	handleChains []HandleFunc // is a list of handlers
-
-	contextProvider internal.Provider[*Context] // is a pool for Context
-	worker          pool.Worker
+	contextEngine *ContextEngine
+	worker        pool.Worker
 
 	decoder codec.Decoder
 }
 
 // NewThread returns a new Thread instance
 func NewThread(options ThreadOptions) *Thread {
-	engine := &Thread{
-		options: options,
-		worker:  pool.NewGoroutinePool(options.WorkerPoolSize),
-		decoder: codec.NewDecoder(options.packetLengthSize),
+	thread := &Thread{
+		options:       options,
+		worker:        pool.NewGoroutinePool(options.WorkerPoolSize),
+		decoder:       codec.NewDecoder(options.packetLengthSize),
+		contextEngine: NewContextEngine(),
 	}
 
-	engine.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {
-		return &Context{thread: engine}
-	})
-	return engine
+	return thread
 }
 
 // Use registers middleware
-func (e *Thread) Use(handler ...HandleFunc) {
-	e.handleChains = append(e.handleChains, handler...)
+func (thread *Thread) Use(handler ...HandleFunc) {
+	thread.contextEngine.handleChains = append(thread.contextEngine.handleChains, handler...)
 }
 
 // HandleRequest handle new request for connection
-func (e *Thread) HandleRequest(conn *Connection) {
+func (thread *Thread) HandleRequest(conn *Connection) {
 	var (
 		msg      []byte
 		err      error
@@ -55,11 +51,11 @@ func (e *Thread) HandleRequest(conn *Connection) {
 	} else {
 		var n int
 		// get bytes from pool, and release after processed
-		bytes := pool.GetByte(e.options.MaxReadBufferSize)
+		bytes := pool.GetByte(thread.options.MaxReadBufferSize)
 		callback = func() {
 			pool.PutByte(bytes)
 		}
-		n, err = e.decoder.Decode(conn, bytes)
+		n, err = thread.decoder.Decode(conn, bytes)
 		if err == nil {
 			msg = bytes[:n]
 		}
@@ -74,36 +70,29 @@ func (e *Thread) HandleRequest(conn *Connection) {
 	}
 
 	// start schedule task
-	e.worker.Schedule(func() {
+	thread.worker.Schedule(func() {
 		defer runtime.HandleCrash()
 		defer callback()
-		e.handleRequest(conn, msg)
+		// close the connection when decode msg failed
+		packet, err := codec.Factory().UnpackPacket(msg)
+		if err != nil {
+			log.Printf("[%s] decode: %v\n", conn.ID(), err)
+			conn.Close()
+			return
+		}
+
+		// acquire context from provider
+		ctx := thread.contextEngine.AcquireAndResetContext(conn, packet)
+		defer thread.contextEngine.ReleaseContext(ctx)
+
+		thread.contextEngine.invoke(ctx, 0)
 	})
 
 }
 
 // ------------------------private methods------------------------
 
-func (e *Thread) handleRequest(conn *Connection, msg []byte) {
-	// close the connection when decode msg failed
-	packet, err := codec.Factory().UnpackPacket(msg)
-	if err != nil {
-		log.Printf("[%s] decode: %v\n", conn.ID(), err)
-		conn.Close()
-		return
-	}
-
-	// compute
-	// acquire context from provider
-	ctx := e.contextProvider.Acquire()
-	defer e.contextProvider.Release(ctx)
-
-	ctx.reset(conn, packet)
-
-	e.invokeContextHandler(ctx, 0)
-}
-
-func (e *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
+func (thread *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 	return func(ctx *Context) {
 		// pack response
 		msg, err := ctx.Packet().Encode(ctx.response)
@@ -114,12 +103,4 @@ func (e *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 
 		ctx.Conn().Push(msg)
 	}
-}
-
-// invokeContextHandler invoke context handler chain
-func (e *Thread) invokeContextHandler(ctx *Context, index int8) {
-	if int(index) > len(e.handleChains)-1 {
-		return
-	}
-	e.handleChains[index](ctx)
 }

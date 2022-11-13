@@ -23,6 +23,7 @@ type Instance interface {
 	Run(stopCh <-chan struct{}) error
 }
 
+// Engine implements of Instance interface
 type Engine struct {
 	options *Options          // options for the event loop
 	schemas []internal.Schema // schema for acceptors
@@ -90,6 +91,8 @@ func (eng *Engine) Run(stopCh <-chan struct{}) error {
 	runtime.WaitClose(stopCh, eng.shutdown)
 	return nil
 }
+
+// =====================private methods =================
 
 func (eng *Engine) startListenSchemas(signal <-chan struct{}) error {
 	// prepare servers

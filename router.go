@@ -55,6 +55,8 @@ func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
 	return router
 }
 
+//==================private methods================
+
 func (router *Router) handleRequest(ctx *Context) {
 	// match handler
 	handler, ok := router.handlers.Get(ctx.Packet().Header().Operate)

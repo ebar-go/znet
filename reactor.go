@@ -13,6 +13,21 @@ type Reactor struct {
 	callback *Callback     // manage connections events
 }
 
+// NewReactor return a new main reactor instance
+func NewReactor(options ReactorOptions) (reactor *Reactor, err error) {
+	poll, err := poller.NewPollerWithBuffer(options.EpollBufferSize)
+	if err != nil {
+		return
+	}
+
+	reactor = &Reactor{
+		poll: poll,
+		sub:  options.NewSubReactor(),
+	}
+
+	return
+}
+
 // Run runs the Reactor with the given signal.
 func (reactor *Reactor) Run(stopCh <-chan struct{}, onRequest ConnectionHandler) {
 	subReactorSignal := make(chan struct{})
@@ -32,6 +47,7 @@ func (reactor *Reactor) Run(stopCh <-chan struct{}, onRequest ConnectionHandler)
 	runtime.WaitClose(stopCh)
 }
 
+// ===================== private methods =================
 func (reactor *Reactor) listenPoller(stopCh <-chan struct{}) {
 	for {
 		select {
@@ -86,19 +102,4 @@ func (reactor *Reactor) initializeConnection(connection *Connection) {
 		// unregister connection from sub reactor
 		reactor.sub.UnregisterConnection,
 	)
-}
-
-// NewReactor return a new main reactor instance
-func NewReactor(options ReactorOptions) (*Reactor, error) {
-	poll, err := poller.NewPollerWithBuffer(options.EpollBufferSize)
-	if err != nil {
-		return nil, err
-	}
-
-	reactor := &Reactor{
-		poll: poll,
-		sub:  options.NewSubReactor(),
-	}
-
-	return reactor, nil
 }

@@ -3,6 +3,7 @@ package znet
 import (
 	"context"
 	"github.com/ebar-go/znet/codec"
+	"github.com/ebar-go/znet/internal"
 	"log"
 	"math"
 )
@@ -19,7 +20,7 @@ type Context struct {
 	context.Context
 	index int8
 
-	thread *Thread
+	engine *ContextEngine
 	conn   *Connection
 
 	packet   *codec.Packet
@@ -39,7 +40,7 @@ func (ctx *Context) Conn() *Connection {
 func (ctx *Context) Next() {
 	if ctx.index < maxIndex {
 		ctx.index++
-		ctx.thread.invokeContextHandler(ctx, ctx.index)
+		ctx.engine.invoke(ctx, ctx.index)
 	}
 }
 
@@ -56,4 +57,40 @@ func (ctx *Context) reset(conn *Connection, packet *codec.Packet) {
 	ctx.Context = context.Background()
 	ctx.response = nil
 	ctx.packet = packet
+}
+
+type ContextEngine struct {
+	handleChains []HandleFunc // is a list of handlers
+
+	provider internal.Provider[*Context] // is a pool for Context
+}
+
+func NewContextEngine() *ContextEngine {
+	eng := &ContextEngine{}
+	eng.provider = internal.NewSyncPoolProvider[*Context](func() interface{} {
+		return &Context{engine: eng}
+	})
+	return eng
+}
+
+func (e *ContextEngine) AcquireAndResetContext(conn *Connection, packet *codec.Packet) *Context {
+	ctx := e.AcquireContext()
+	ctx.reset(conn, packet)
+	return ctx
+}
+
+func (e *ContextEngine) AcquireContext() *Context {
+	return e.provider.Acquire()
+}
+
+func (e *ContextEngine) ReleaseContext(ctx *Context) {
+	e.provider.Release(ctx)
+}
+
+// invokeContextHandler invoke context handler chain
+func (e *ContextEngine) invoke(ctx *Context, index int8) {
+	if int(index) > len(e.handleChains)-1 {
+		return
+	}
+	e.handleChains[index](ctx)
 }
