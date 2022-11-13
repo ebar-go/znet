@@ -87,13 +87,7 @@ func NewReactor(options ReactorOptions) (*Reactor, error) {
 	reactor := &Reactor{
 		options: options,
 		poll:    poll,
-	}
-
-	// choose sub reactor implements by shard count
-	if options.SubReactorShardCount <= 1 {
-		reactor.sub = NewSingleSubReactor(options.ThreadQueueCapacity)
-	} else {
-		reactor.sub = NewShardSubReactor(options.SubReactorShardCount, options.ThreadQueueCapacity)
+		sub:     options.NewSubReactor(),
 	}
 
 	return reactor, nil

@@ -44,6 +44,14 @@ type ReactorOptions struct {
 	SubReactorShardCount int
 }
 
+func (options ReactorOptions) NewSubReactor() SubReactor {
+	if options.SubReactorShardCount <= 1 {
+		return NewSingleSubReactor(options.ThreadQueueCapacity)
+	}
+
+	return NewShardSubReactor(options.SubReactorShardCount, options.ThreadQueueCapacity)
+}
+
 func (options *Options) NewReactorOrDie() *Reactor {
 	reactor, err := NewReactor(options.Reactor)
 	if err != nil {
