@@ -19,10 +19,3 @@ func (p *Packet) Marshal(data any) (err error) {
 func (p *Packet) Unmarshal(data any) (err error) {
 	return p.codec.Unmarshal(p.Body, data)
 }
-
-type Codec interface {
-	Marshal(data any) ([]byte, error)
-	Unmarshal(p []byte, data any) error
-	Unpack(msg []byte) (packet *Packet)
-	Pack(packet *Packet) ([]byte, error)
-}

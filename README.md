@@ -119,9 +119,9 @@ func main() {
 - We design the protocol for solve TCP sticky packet problem
 - ByteOrder: big endian
 ```
-|-------------- header ------------- |-------- body --------|
-|packetLength|operate|contentType|seq|-------- body --------|
-|     4      |   2   |      2    | 2 |          n           |
+|-------------- header --------------|-------- body --------|
+|packetLength| action |      seq     |-------- body --------|
+|     4      |    2   |       2      |          n           |
 ```
 
 ## Benchmark
