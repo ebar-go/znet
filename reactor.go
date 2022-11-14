@@ -87,14 +87,14 @@ func (reactor *Reactor) initializeConnection(connection *Connection) {
 		return
 	}
 
-	reactor.callback.OnConnect(connection)
+	reactor.callback.triggerOpenEvent(connection)
 
 	reactor.sub.RegisterConnection(connection)
 
 	// those callback functions will be invoked before connection.Close()
 	connection.AddBeforeCloseHook(
 		// trigger disconnect callback
-		reactor.callback.OnDisconnect,
+		reactor.callback.triggerCloseEvent,
 		// remove connection from epoll
 		func(conn *Connection) {
 			_ = reactor.poll.Remove(conn.fd)
