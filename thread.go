@@ -11,23 +11,20 @@ import (
 
 // Thread represents context manager
 type Thread struct {
-	options ThreadOptions
-
-	contextEngine *ContextEngine
+	codec         codec.Codec
+	decoder       codec.Decoder
 	worker        pool.Worker
-
-	decoder codec.Decoder
-	codec   codec.Codec
+	contextEngine *ContextEngine
 }
 
 // NewThread returns a new Thread instance
 func NewThread(options ThreadOptions) *Thread {
 	thread := &Thread{
-		options:       options,
-		worker:        pool.NewGoroutinePool(options.WorkerPoolSize),
-		decoder:       codec.NewDecoder(options.packetLengthSize),
+		codec:   options.NewCodec(),
+		decoder: options.NewDecoder(),
+		worker:  options.NewWorkerPool(),
+
 		contextEngine: NewContextEngine(),
-		codec:         options.NewCodec(),
 	}
 
 	return thread

@@ -2,6 +2,7 @@ package znet
 
 import (
 	"errors"
+	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/znet/codec"
 )
 
@@ -39,6 +40,13 @@ type ThreadOptions struct {
 	ContentType string
 }
 
+func (options ThreadOptions) NewWorkerPool() pool.Worker {
+	return pool.NewGoroutinePool(options.WorkerPoolSize)
+}
+
+func (options ThreadOptions) NewDecoder() codec.Decoder {
+	return codec.NewDecoder(options.packetLengthSize)
+}
 func (options ThreadOptions) NewCodec() (cc codec.Codec) {
 	cc = codec.NewJsonCodec()
 	if options.ContentType == ContentTypeProto {

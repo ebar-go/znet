@@ -13,19 +13,19 @@ type Decoder interface {
 
 	DecodeBytes(bytes []byte) (buf []byte, err error)
 }
-type LineBasedFrameDecoder struct {
+type LengthFieldBasedFrameDecode struct {
 	packetLengthSize int
 	endian           binary.Endian
 }
 
 func NewDecoder(packetLengthSize int) Decoder {
-	return &LineBasedFrameDecoder{
+	return &LengthFieldBasedFrameDecode{
 		packetLengthSize: packetLengthSize,
 		endian:           defaultEndian,
 	}
 }
 
-func (decoder *LineBasedFrameDecoder) Decode(reader io.Reader) (buf []byte, err error) {
+func (decoder *LengthFieldBasedFrameDecode) Decode(reader io.Reader) (buf []byte, err error) {
 	p := pool.GetByte(decoder.packetLengthSize)
 	defer pool.PutByte(p)
 	_, err = io.ReadFull(reader, p)
@@ -43,7 +43,7 @@ func (decoder *LineBasedFrameDecoder) Decode(reader io.Reader) (buf []byte, err 
 	return
 }
 
-func (decoder *LineBasedFrameDecoder) DecodeBytes(bytes []byte) (buf []byte, err error) {
+func (decoder *LengthFieldBasedFrameDecode) DecodeBytes(bytes []byte) (buf []byte, err error) {
 	length := int(decoder.endian.Int32(bytes[:decoder.packetLengthSize]))
 	if length <= 0 || length > len(bytes)-decoder.packetLengthSize {
 		err = errors.New("packet exceeded, connection may be closed")
@@ -53,7 +53,7 @@ func (decoder *LineBasedFrameDecoder) DecodeBytes(bytes []byte) (buf []byte, err
 	return bytes[decoder.packetLengthSize:length], nil
 }
 
-func (decoder *LineBasedFrameDecoder) Encode(writer io.Writer, buf []byte) (n int, err error) {
+func (decoder *LengthFieldBasedFrameDecode) Encode(writer io.Writer, buf []byte) (n int, err error) {
 	length := decoder.packetLengthSize + len(buf)
 	p := pool.GetByte(length)
 	defer pool.PutByte(p)
