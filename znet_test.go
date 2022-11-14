@@ -61,10 +61,9 @@ func TestClient(t *testing.T) {
 		}
 	}()
 
-	cc := codec.NewJsonCodec()
-
-	packet := codec.NewPacket(cc)
+	packet := codec.NewPacket(codec.NewJsonCodec())
 	packet.Action = 1
+	packet.Seq = 1
 
 	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
 	p, _ := packet.Pack()

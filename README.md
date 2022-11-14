@@ -59,51 +59,45 @@ func main() {
 package main
 
 import (
-	"context"
-	"github.com/ebar-go/znet/codec"
-	"log"
-	"net"
-	"time"
+  "github.com/ebar-go/znet/codec"
+  "log"
+  "net"
+  "time"
 )
 
 func main() {
-	conn, err := net.Dial("tcp", "localhost:8081")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+  conn, err := net.Dial("tcp", "localhost:8081")
+  if err != nil {
+    log.Fatalf("unexpected error: %v", err)
+  }
 
-	go func() {
-		for {
-			bytes := make([]byte, 512)
-			n, err := conn.Read(bytes)
-			if err != nil {
-				return
-			}
-			log.Println("receive response: ", string(bytes[:n]))
-		}
-	}()
+  decoder := codec.NewDecoder(4)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				
-			}
-			packet := codec.Factory().NewWithHeader(codec.Header{Operate: OperateFoo, ContentType: codec.ContentTypeJSON})
-			bytes, err := packet.Pack(map[string]any{"key": "foo"})
-			if err != nil {
-				return
-			}
-			conn.Write(bytes)
-			time.Sleep(time.Second)
+  go func() {
+    for {
+      bytes, err := decoder.Decode(conn)
+      if err != nil {
+        return
+      }
+      log.Println("receive response: ", string(bytes[:n]))
+    }
+  }()
 
-		}
-	}()
-	<-ctx.Done()
+  packet := codec.NewPacket(codec.NewJsonCodec())
+  packet.Action = 1
+  packet.Seq = 1
+
+  _ = packet.Marshal(map[string]interface{}{"foo": "bar"})
+  bytes, _ := packet.Pack()
+  
+  for {
+    n, err := decoder.Encode(conn, bytes)
+    if err != nil {
+      break
+    }
+    log.Println("send message length=", n)
+    time.Sleep(time.Second)
+  }
 }
 ```
 
