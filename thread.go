@@ -27,7 +27,7 @@ func NewThread(options ThreadOptions) *Thread {
 		worker:        pool.NewGoroutinePool(options.WorkerPoolSize),
 		decoder:       codec.NewDecoder(options.packetLengthSize),
 		contextEngine: NewContextEngine(),
-		codec:         codec.NewJsonCodec(),
+		codec:         options.NewCodec(),
 	}
 
 	return thread

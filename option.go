@@ -2,6 +2,12 @@ package znet
 
 import (
 	"errors"
+	"github.com/ebar-go/znet/codec"
+)
+
+const (
+	ContentTypeJson  = "json"
+	ContentTypeProto = "protobuf"
 )
 
 // Options represents app options
@@ -29,6 +35,16 @@ type ThreadOptions struct {
 	MaxReadBufferSize int
 
 	packetLengthSize int
+
+	ContentType string
+}
+
+func (options ThreadOptions) NewCodec() codec.Codec {
+	cc := codec.NewJsonCodec()
+	if options.ContentType == ContentTypeProto {
+
+	}
+	return cc
 }
 
 // ReactorOptions represents the options for the reactor
@@ -123,5 +139,6 @@ func defaultThreadOptions() ThreadOptions {
 		MaxReadBufferSize: 512,
 		WorkerPoolSize:    1000,
 		packetLengthSize:  4,
+		ContentType:       ContentTypeJson, // default is json
 	}
 }
