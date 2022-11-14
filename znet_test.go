@@ -67,7 +67,7 @@ func TestClient(t *testing.T) {
 	packet.Action = 1
 
 	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
-	p, _ := cc.Pack(packet)
+	p, _ := packet.Pack()
 
 	log.Printf("packet length=%d, str=%s\n", len(p), string(p))
 
@@ -132,7 +132,7 @@ func BenchmarkClient(b *testing.B) {
 	packet.Action = 1
 
 	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
-	bytes, _ := cc.Pack(packet)
+	bytes, _ := packet.Pack()
 	b.ResetTimer()
 	for i := 0; i < 100; i++ {
 		go func() {

@@ -72,7 +72,7 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 		defer runtime.HandleCrash()
 		defer callback()
 		// close the connection when decode msg failed
-		packet := thread.codec.Unpack(msg)
+		packet := codec.NewPacket(thread.codec).Unpack(msg)
 		if err != nil {
 			log.Printf("[%s] decode: %v\n", conn.ID(), err)
 			conn.Close()
@@ -93,7 +93,7 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 func (thread *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 	return func(ctx *Context) {
 		// pack response
-		msg, err := thread.codec.Pack(ctx.packet)
+		msg, err := ctx.packet.Pack()
 		if err != nil {
 			errorHandler(ctx, err)
 			return
