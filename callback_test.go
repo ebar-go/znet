@@ -14,7 +14,7 @@ func TestCallback_OnConnect(t *testing.T) {
 	assert.NotNil(t, callback)
 	assert.Equal(t, connected, 0)
 
-	callback.OnConnect(&Connection{})
+	callback.OnOpen(&Connection{})
 	assert.Equal(t, connected, 1)
 }
 
@@ -29,9 +29,9 @@ func TestCallback_OnDisconnect(t *testing.T) {
 	assert.NotNil(t, callback)
 	assert.Equal(t, connected, 0)
 
-	callback.OnConnect(&Connection{})
+	callback.OnOpen(&Connection{})
 	assert.Equal(t, connected, 1)
 
-	callback.OnDisconnect(&Connection{})
+	callback.OnClose(&Connection{})
 	assert.Equal(t, connected, 0)
 }

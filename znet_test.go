@@ -19,10 +19,10 @@ func TestNew(t *testing.T) {
 		runtime.ShowMemoryUsage()
 	}()
 	instance := New(func(options *Options) {
-		options.OnConnect = func(conn *Connection) {
+		options.OnOpen = func(conn *Connection) {
 			log.Printf("[%s] connected", conn.ID())
 		}
-		options.OnDisconnect = func(conn *Connection) {
+		options.OnClose = func(conn *Connection) {
 			log.Printf("[%s] disconnected:%d", conn.ID(), time.Now().UnixMicro())
 		}
 	})
