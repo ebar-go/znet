@@ -39,10 +39,10 @@ type ThreadOptions struct {
 	ContentType string
 }
 
-func (options ThreadOptions) NewCodec() codec.Codec {
-	cc := codec.NewJsonCodec()
+func (options ThreadOptions) NewCodec() (cc codec.Codec) {
+	cc = codec.NewJsonCodec()
 	if options.ContentType == ContentTypeProto {
-
+		cc = codec.NewProtoCodec()
 	}
 	return cc
 }

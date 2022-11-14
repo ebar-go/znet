@@ -2,7 +2,9 @@ package codec
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/ebar-go/ego/utils/binary"
+	"google.golang.org/protobuf/proto"
 )
 
 // Options represents options options
@@ -81,3 +83,35 @@ func (codec *JsonCodec) Unpack(msg []byte) (packet *Packet) {
 }
 
 var defaultEndian = binary.BigEndian()
+
+type ProtoCodec struct {
+	*Options
+}
+
+func NewProtoCodec() *ProtoCodec {
+	options := defaultOptions()
+	options.complete()
+	return &ProtoCodec{Options: options}
+}
+
+func (codec *ProtoCodec) Unmarshal(p []byte, data any) error {
+	message, ok := data.(proto.Message)
+	if !ok {
+		return errors.New("invalid proto message")
+	}
+	return proto.Unmarshal(p, message)
+}
+
+func (codec *ProtoCodec) Marshal(data any) ([]byte, error) {
+	message, ok := data.(proto.Message)
+	if !ok {
+		return nil, errors.New("invalid proto message")
+	}
+	return proto.Marshal(message)
+}
+
+func (codec *ProtoCodec) Unpack(msg []byte) (packet *Packet) {
+	packet = &Packet{codec: codec}
+	codec.Options.Unpack(packet, msg)
+	return
+}
