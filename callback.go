@@ -2,28 +2,28 @@ package znet
 
 // Callback manage connection callback handlers.
 type Callback struct {
-	connect    ConnectionHandler
-	disconnect ConnectionHandler
+	open  ConnectionHandler
+	close ConnectionHandler
 }
 
-// OnConnect is called when the connection is established
-func (callback *Callback) OnConnect(conn *Connection) {
-	if callback.connect != nil {
-		callback.connect(conn)
+// triggerOpenEvent is called when the connection is established
+func (callback *Callback) triggerOpenEvent(conn *Connection) {
+	if callback.open != nil {
+		callback.open(conn)
 	}
 }
 
-// OnDisconnect is called when the connection is closed
-func (callback *Callback) OnDisconnect(conn *Connection) {
-	if callback.disconnect != nil {
-		callback.disconnect(conn)
+// triggerCloseEvent is called when the connection is closed
+func (callback *Callback) triggerCloseEvent(conn *Connection) {
+	if callback.close != nil {
+		callback.close(conn)
 	}
 }
 
 // newCallback creates a new callback instance with the given handlers
-func newCallback(connectHandler, disconnectHandler ConnectionHandler) *Callback {
+func newCallback(open, close ConnectionHandler) *Callback {
 	return &Callback{
-		connect:    connectHandler,
-		disconnect: disconnectHandler,
+		open:  open,
+		close: close,
 	}
 }

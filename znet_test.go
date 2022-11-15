@@ -19,10 +19,10 @@ func TestNew(t *testing.T) {
 		runtime.ShowMemoryUsage()
 	}()
 	instance := New(func(options *Options) {
-		options.OnConnect = func(conn *Connection) {
+		options.OnOpen = func(conn *Connection) {
 			log.Printf("[%s] connected", conn.ID())
 		}
-		options.OnDisconnect = func(conn *Connection) {
+		options.OnClose = func(conn *Connection) {
 			log.Printf("[%s] disconnected:%d", conn.ID(), time.Now().UnixMicro())
 		}
 	})
@@ -61,13 +61,12 @@ func TestClient(t *testing.T) {
 		}
 	}()
 
-	cc := codec.NewJsonCodec()
-
-	packet := codec.NewPacket(cc)
+	packet := codec.NewPacket(codec.NewJsonCodec())
 	packet.Action = 1
+	packet.Seq = 1
 
 	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
-	p, _ := cc.Pack(packet)
+	p, _ := packet.Pack()
 
 	log.Printf("packet length=%d, str=%s\n", len(p), string(p))
 
@@ -132,7 +131,7 @@ func BenchmarkClient(b *testing.B) {
 	packet.Action = 1
 
 	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
-	bytes, _ := cc.Pack(packet)
+	bytes, _ := packet.Pack()
 	b.ResetTimer()
 	for i := 0; i < 100; i++ {
 		go func() {

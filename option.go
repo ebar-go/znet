@@ -15,11 +15,11 @@ const (
 type Options struct {
 	// Debug enables debug logging
 	Debug bool
-	// OnConnect is a callback function that is called when the connection is established
-	OnConnect ConnectionHandler
+	// OnOpen is a callback function that is called when the connection is established
+	OnOpen ConnectionHandler
 
-	// OnDisconnect is a callback function that is called when the connection is closed
-	OnDisconnect ConnectionHandler
+	// OnClose is a callback function that is called when the connection is closed
+	OnClose ConnectionHandler
 
 	// Middlewares is a lot of callback functions that are called when the connection send new message
 	Middlewares []HandleFunc
@@ -81,7 +81,7 @@ func (options *Options) NewReactorOrDie() *Reactor {
 	if err != nil {
 		panic(err)
 	}
-	reactor.callback = newCallback(options.OnConnect, options.OnDisconnect)
+	reactor.callback = newCallback(options.OnOpen, options.OnClose)
 	return reactor
 }
 
@@ -126,11 +126,11 @@ type Option func(options *Options)
 
 func defaultOptions() *Options {
 	return &Options{
-		Debug:        false,
-		OnConnect:    func(conn *Connection) {},
-		OnDisconnect: func(conn *Connection) {},
-		Reactor:      defaultReactorOptions(),
-		Thread:       defaultThreadOptions(),
+		Debug:   false,
+		OnOpen:  func(conn *Connection) {},
+		OnClose: func(conn *Connection) {},
+		Reactor: defaultReactorOptions(),
+		Thread:  defaultThreadOptions(),
 	}
 }
 
