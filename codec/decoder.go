@@ -13,26 +13,31 @@ type Decoder interface {
 
 	DecodeBytes(bytes []byte) (buf []byte, err error)
 }
+
+// LengthFieldBasedFrameDecode implements Decoder interface by decode length field
 type LengthFieldBasedFrameDecode struct {
-	packetLengthSize int
-	endian           binary.Endian
+	offset int
+	endian binary.Endian
 }
 
-func NewDecoder(packetLengthSize int) Decoder {
+func NewDecoder(offset int) Decoder {
 	return &LengthFieldBasedFrameDecode{
-		packetLengthSize: packetLengthSize,
-		endian:           defaultEndian,
+		offset: offset,
+		endian: defaultEndian,
 	}
 }
 
 func (decoder *LengthFieldBasedFrameDecode) Decode(reader io.Reader) (buf []byte, err error) {
-	p := pool.GetByte(decoder.packetLengthSize)
+	// read length field of packet
+	p := pool.GetByte(decoder.offset)
 	defer pool.PutByte(p)
 	_, err = io.ReadFull(reader, p)
 	if err != nil {
 		return
 	}
-	length := int(decoder.endian.Int32(p)) - decoder.packetLengthSize
+
+	// read other part of packet
+	length := int(decoder.endian.Int32(p)) - decoder.offset
 	if length <= 0 {
 		// when connection is closed, first read packet length may be successfully, but connection has closed
 		err = errors.New("packet exceeded, connection may be closed")
@@ -44,20 +49,20 @@ func (decoder *LengthFieldBasedFrameDecode) Decode(reader io.Reader) (buf []byte
 }
 
 func (decoder *LengthFieldBasedFrameDecode) DecodeBytes(bytes []byte) (buf []byte, err error) {
-	length := int(decoder.endian.Int32(bytes[:decoder.packetLengthSize]))
-	if length <= 0 || length > len(bytes)-decoder.packetLengthSize {
+	length := int(decoder.endian.Int32(bytes[:decoder.offset]))
+	if length <= 0 || length > len(bytes)-decoder.offset {
 		err = errors.New("packet exceeded, connection may be closed")
 		return
 	}
 
-	return bytes[decoder.packetLengthSize:length], nil
+	return bytes[decoder.offset:length], nil
 }
 
 func (decoder *LengthFieldBasedFrameDecode) Encode(writer io.Writer, buf []byte) (n int, err error) {
-	length := decoder.packetLengthSize + len(buf)
+	length := decoder.offset + len(buf)
 	p := pool.GetByte(length)
 	defer pool.PutByte(p)
-	decoder.endian.PutInt32(p[:decoder.packetLengthSize], int32(length))
-	copy(p[decoder.packetLengthSize:], buf)
+	decoder.endian.PutInt32(p[:decoder.offset], int32(length))
+	copy(p[decoder.offset:], buf)
 	return writer.Write(p)
 }
