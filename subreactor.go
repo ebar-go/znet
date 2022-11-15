@@ -2,6 +2,7 @@ package znet
 
 import (
 	"github.com/ebar-go/ego/utils/runtime"
+	"github.com/ebar-go/ego/utils/structure"
 	"github.com/ebar-go/znet/internal"
 )
 
@@ -19,7 +20,7 @@ type SingleSubReactor struct {
 	buffer *internal.Buffer[int]
 
 	// container manage all connections
-	container *internal.Container[int, *Connection]
+	container *structure.ConcurrentMap[int, *Connection]
 }
 
 // RegisterConnection registers a new connection to the epoll listener
@@ -54,7 +55,7 @@ func (sub *SingleSubReactor) Polling(stopCh <-chan struct{}, callback func(int))
 func NewSingleSubReactor(bufferSize int) *SingleSubReactor {
 	return &SingleSubReactor{
 		buffer:    internal.NewBuffer[int](bufferSize),
-		container: internal.NewContainer[int, *Connection](),
+		container: structure.NewConcurrentMap[int, *Connection](),
 	}
 }
 

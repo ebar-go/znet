@@ -1,7 +1,7 @@
 package znet
 
 import (
-	"github.com/ebar-go/znet/internal"
+	"github.com/ebar-go/ego/utils/structure"
 	"github.com/pkg/errors"
 )
 
@@ -24,14 +24,14 @@ func StandardHandler[Request, Response any](action Action[Request, Response]) Ha
 
 // Router represents router instance
 type Router struct {
-	handlers        *internal.Container[int16, Handler]
+	handlers        *structure.ConcurrentMap[int16, Handler]
 	errorHandler    func(ctx *Context, err error)
 	notFoundHandler HandleFunc
 }
 
 func NewRouter() *Router {
 	return &Router{
-		handlers:        internal.NewContainer[int16, Handler](),
+		handlers:        structure.NewConcurrentMap[int16, Handler](),
 		errorHandler:    nil,
 		notFoundHandler: nil,
 	}

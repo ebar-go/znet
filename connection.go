@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"github.com/ebar-go/ego/utils/structure"
 	"github.com/ebar-go/znet/internal"
 	"github.com/gobwas/ws/wsutil"
 	uuid "github.com/satori/go.uuid"
@@ -24,12 +25,12 @@ type Connection struct {
 	// beforeCloseHooks is a list of hooks that are called before the connection
 	beforeCloseHooks []func(connection *Connection)
 	// is a map of properties
-	property *internal.Container[string, any]
+	property *structure.ConcurrentMap[string, any]
 	protocol string
 }
 
 // Property return properties container
-func (conn *Connection) Property() *internal.Container[string, any] {
+func (conn *Connection) Property() *structure.ConcurrentMap[string, any] {
 	return conn.property
 }
 
@@ -85,6 +86,6 @@ func NewConnection(conn net.Conn, fd int) *Connection {
 		instance: conn,
 		fd:       fd,
 		uuid:     uuid.NewV4().String(),
-		property: internal.NewContainer[string, any](),
+		property: structure.NewConcurrentMap[string, any](),
 	}
 }
