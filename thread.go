@@ -13,7 +13,7 @@ import (
 type Thread struct {
 	codec         codec.Codec
 	decoder       codec.Decoder
-	worker        pool.Worker
+	worker        pool.WorkerPool
 	contextEngine *ContextEngine
 }
 

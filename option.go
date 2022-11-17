@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/znet/codec"
+	"time"
 )
 
 const (
@@ -30,18 +31,22 @@ type Options struct {
 }
 
 type ThreadOptions struct {
-	// WorkerPollSize is the size of the worker pool, default is 1000
-	WorkerPoolSize int
 	// MaxReadBufferSize is the size of the max read buffer, default is 512
 	MaxReadBufferSize int
 
 	packetLengthSize int
 
 	ContentType string
+
+	WorkerPool *pool.Options
 }
 
-func (options ThreadOptions) NewWorkerPool() pool.Worker {
-	return pool.NewGoroutinePool(options.WorkerPoolSize)
+func (options ThreadOptions) NewWorkerPool() pool.WorkerPool {
+	return pool.NewGoroutinePool(func(opts *pool.Options) {
+		opts.Max = options.WorkerPool.Max
+		opts.Idle = options.WorkerPool.Idle
+		opts.Timeout = options.WorkerPool.Timeout
+	})
 }
 
 func (options ThreadOptions) NewDecoder() codec.Decoder {
@@ -99,8 +104,8 @@ func (options *Options) Validate() error {
 		return errors.New("Reactor.EpollBufferSize must be greater than zero")
 	}
 
-	if options.Thread.WorkerPoolSize <= 0 {
-		return errors.New("Thread.WorkerPoolSize must be greater than zero")
+	if options.Thread.WorkerPool.Max <= 0 {
+		return errors.New("Thread.WorkerPool.Max must be greater than zero")
 	}
 
 	if options.Thread.MaxReadBufferSize <= 0 {
@@ -145,8 +150,12 @@ func defaultReactorOptions() ReactorOptions {
 func defaultThreadOptions() ThreadOptions {
 	return ThreadOptions{
 		MaxReadBufferSize: 512,
-		WorkerPoolSize:    1000,
 		packetLengthSize:  4,
 		ContentType:       ContentTypeJson, // default is json
+		WorkerPool: &pool.Options{
+			Max:     10000,
+			Idle:    100,
+			Timeout: time.Minute,
+		},
 	}
 }
