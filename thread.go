@@ -64,17 +64,18 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 		return
 	}
 
+	packet := thread.newPacket()
+	err = packet.Unpack(msg)
+	if err != nil {
+		log.Printf("[%s] decode: %v\n", conn.ID(), err)
+		conn.Close()
+		return
+	}
+
 	// start schedule task
 	thread.worker.Schedule(func() {
 		defer runtime.HandleCrash()
 		defer callback()
-		// close the connection when decode msg failed
-		packet := codec.NewPacket(thread.codec).Unpack(msg)
-		if err != nil {
-			log.Printf("[%s] decode: %v\n", conn.ID(), err)
-			conn.Close()
-			return
-		}
 
 		// acquire context from provider
 		ctx := thread.contextEngine.AcquireAndResetContext(conn, packet)
@@ -87,6 +88,9 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 
 // ------------------------private methods------------------------
 
+func (thread *Thread) newPacket() *codec.Packet {
+	return codec.NewPacket(thread.codec)
+}
 func (thread *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 	return func(ctx *Context) {
 		// pack response

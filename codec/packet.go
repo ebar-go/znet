@@ -1,5 +1,7 @@
 package codec
 
+import "errors"
+
 type Packet struct {
 	options *Options
 	codec   Codec
@@ -37,11 +39,14 @@ func (p *Packet) Pack() ([]byte, error) {
 	return buf, nil
 }
 
-func (p *Packet) Unpack(msg []byte) *Packet {
+func (p *Packet) Unpack(msg []byte) error {
 	options := p.options
+	if len(msg) < options.headerOffset {
+		return errors.New("msg too short")
+	}
 	p.Action = options.endian.Int16(msg[0:options.actionOffset])
 	p.Seq = options.endian.Int16(msg[options.actionOffset:options.seqOffset])
 	p.Body = msg[options.headerOffset:]
 
-	return p
+	return nil
 }
