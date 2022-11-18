@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
+	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -42,9 +44,44 @@ func TestNew(t *testing.T) {
 
 }
 
+func TestWebsocketClient(t *testing.T) {
+	conn, _, _, err := ws.Dial(context.Background(), "ws://127.0.0.1:8082")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	go func() {
+		for {
+			bytes, err := wsutil.ReadServerBinary(conn)
+			if err != nil {
+				log.Println("read error", time.Now().UnixMicro(), err)
+				return
+			}
+			log.Println("receive response: ", string(bytes))
+		}
+	}()
+
+	packet := codec.NewPacket(codec.NewJsonCodec())
+	packet.Action = 1
+	packet.Seq = 1
+
+	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
+	p, _ := packet.Pack()
+
+	log.Printf("packet length=%d, str=%s\n", len(p), string(p))
+
+	go func() {
+		for {
+			err := wsutil.WriteClientBinary(conn, p)
+			log.Println(err)
+			time.Sleep(time.Second * 3)
+		}
+	}()
+	select {}
+}
+
 func TestClient(t *testing.T) {
-	dialer := net.Dialer{KeepAlive: -1}
-	conn, err := dialer.Dial("tcp", "localhost:8081")
+	conn, err := net.Dial("tcp", "localhost:8081")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

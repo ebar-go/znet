@@ -6,6 +6,7 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"log"
 	"net"
+	"syscall"
 )
 
 // WebsocketAcceptor represents websocket acceptor
@@ -23,7 +24,7 @@ func (acceptor *WebsocketAcceptor) Run(bind string) (err error) {
 	}
 
 	// use multiple cpus to improve performance
-	for i := 0; i < acceptor.options.Core; i++ {
+	for i := 0; i < 1; i++ {
 		go func() {
 			defer runtime.HandleCrash()
 			acceptor.accept(ln)
@@ -55,7 +56,7 @@ func (acceptor *WebsocketAcceptor) accept(ln net.Listener) {
 				log.Printf("upgrade(\"%s\") error(%v)", conn.RemoteAddr().String(), err)
 				continue
 			}
-			acceptor.base.handler(&wrapConnection{conn})
+			acceptor.base.handler(&wrapConnection{Conn: conn})
 		}
 
 	}
@@ -80,12 +81,16 @@ type wrapConnection struct {
 	net.Conn
 }
 
+func (c *wrapConnection) SyscallConn() (syscall.RawConn, error) {
+	return c.Conn.(syscall.Conn).SyscallConn()
+}
+
 func (c *wrapConnection) Read(p []byte) (n int, err error) {
 	buf, err := wsutil.ReadClientBinary(c.Conn)
 	if err != nil {
 		return
 	}
-	copy(p, buf)
+	n = copy(p, buf)
 	return
 }
 

@@ -2,8 +2,6 @@ package znet
 
 import (
 	"github.com/ebar-go/ego/utils/structure"
-	"github.com/ebar-go/znet/internal"
-	"github.com/gobwas/ws/wsutil"
 	uuid "github.com/satori/go.uuid"
 	"net"
 	"sync"
@@ -48,10 +46,6 @@ func (conn *Connection) Push(p []byte) {
 
 // Write writes message to the connection
 func (conn *Connection) Write(p []byte) (int, error) {
-	if conn.protocol == internal.WEBSOCKET {
-		err := wsutil.WriteServerBinary(conn.instance, p)
-		return len(p), err
-	}
 	return conn.instance.Write(p)
 }
 

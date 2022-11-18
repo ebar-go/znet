@@ -4,8 +4,6 @@ import (
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
-	"github.com/ebar-go/znet/internal"
-	"github.com/gobwas/ws/wsutil"
 	"log"
 )
 
@@ -41,20 +39,11 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 		msg      []byte
 		err      error
 		callback = func() {}
+		n        int
 	)
 
-	// read message from connection
-	if conn.protocol == internal.WEBSOCKET {
-		// read websocket request message
-		var bytes []byte
-		bytes, err = wsutil.ReadClientBinary(conn.instance)
-		if err == nil {
-			msg, err = thread.decoder.DecodeBytes(bytes)
-		}
-
-	} else {
-		msg, err = thread.decoder.Decode(conn.instance)
-	}
+	bytes := make([]byte, 512)
+	n, err = conn.Read(bytes)
 
 	// close the connection when read failed
 	if err != nil {
@@ -64,6 +53,7 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 		return
 	}
 
+	msg = bytes[:n]
 	packet := thread.newPacket()
 	err = packet.Unpack(msg)
 	if err != nil {
@@ -100,6 +90,6 @@ func (thread *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
 			return
 		}
 
-		thread.decoder.Encode(ctx.Conn(), msg)
+		ctx.Conn().Write(msg)
 	}
 }
