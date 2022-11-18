@@ -3,6 +3,7 @@ package acceptor
 import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/gobwas/ws"
+	"github.com/gobwas/ws/wsutil"
 	"log"
 	"net"
 )
@@ -54,7 +55,7 @@ func (acceptor *WebsocketAcceptor) accept(ln net.Listener) {
 				log.Printf("upgrade(\"%s\") error(%v)", conn.RemoteAddr().String(), err)
 				continue
 			}
-			acceptor.base.handler(conn)
+			acceptor.base.handler(&wrapConnection{conn})
 		}
 
 	}
@@ -73,4 +74,26 @@ func NewWSAcceptor(options *Options, handler func(conn net.Conn)) *WebsocketAcce
 		},
 	}
 
+}
+
+type wrapConnection struct {
+	net.Conn
+}
+
+func (c *wrapConnection) Read(p []byte) (n int, err error) {
+	buf, err := wsutil.ReadClientBinary(c.Conn)
+	if err != nil {
+		return
+	}
+	copy(p, buf)
+	return
+}
+
+func (c *wrapConnection) Write(p []byte) (n int, err error) {
+	err = wsutil.WriteServerBinary(c.Conn, p)
+	if err != nil {
+		return
+	}
+	n = len(p)
+	return
 }
