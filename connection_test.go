@@ -1,32 +1,14 @@
 package znet
 
 import (
-	"github.com/ebar-go/ego/utils/binary"
-	"github.com/ebar-go/znet/internal"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"net"
 	"testing"
-	"time"
 )
 
 func provideNetConn() net.Conn {
-	stop := make(chan struct{})
-	go internal.NewSchema(internal.TCP, ":8081").
-		Listen(stop, func(conn net.Conn, protocol string) {
-			content := time.Now().String()
-			buf := make([]byte, len(content)+4)
-			binary.BigEndian().PutInt32(buf[:4], int32(len(content))+4)
-			binary.BigEndian().PutString(buf[4:], content)
-			conn.Write(buf)
-		})
-
-	time.Sleep(time.Second * 1)
-	conn, err := net.Dial("tcp", ":8081")
-	if err != nil {
-		panic(err)
-	}
-	return conn
+	return nil
 }
 func TestNewConnection(t *testing.T) {
 	connection := NewConnection(provideNetConn(), 1)

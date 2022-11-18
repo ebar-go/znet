@@ -24,7 +24,6 @@ type Connection struct {
 	beforeCloseHooks []func(connection *Connection)
 	// is a map of properties
 	property *structure.ConcurrentMap[string, any]
-	protocol string
 }
 
 // Property return properties container
@@ -67,11 +66,6 @@ func (conn *Connection) Close() {
 // AddBeforeCloseHook adds a hook to the connection before closed
 func (conn *Connection) AddBeforeCloseHook(hooks ...func(conn *Connection)) {
 	conn.beforeCloseHooks = append(conn.beforeCloseHooks, hooks...)
-}
-
-func (conn *Connection) withProtocol(protocol string) *Connection {
-	conn.protocol = protocol
-	return conn
 }
 
 // NewConnection returns a new Connection instance

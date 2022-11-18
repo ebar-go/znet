@@ -98,11 +98,11 @@ func (eng *Engine) startListenSchemas(signal <-chan struct{}) error {
 	// prepare servers
 	for _, schema := range eng.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(signal, func(conn net.Conn, protocol string) {
+		if err := schema.Listen(signal, func(conn net.Conn) {
 			// this callback will be invoked when the connection is established
 
 			// create instance of Connection
-			connection := NewConnection(conn, eng.reactor.poll.SocketFD(conn)).withProtocol(protocol)
+			connection := NewConnection(conn, eng.reactor.poll.SocketFD(conn))
 			// initialize this new connection by reactor
 			eng.reactor.initializeConnection(connection)
 		}); err != nil {
