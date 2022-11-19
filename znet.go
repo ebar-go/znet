@@ -7,23 +7,8 @@ import (
 	"log"
 )
 
-// Instance represents an eng interface
-type Instance interface {
-	// Router return the router instance
-	Router() *Router
-
-	// ListenTCP listen tcp server
-	ListenTCP(addr string)
-
-	// ListenWebsocket listen websocket server
-	ListenWebsocket(addr string)
-
-	// Run runs the instance with the given signal handler
-	Run(stopCh <-chan struct{}) error
-}
-
-// Engine implements of Instance interface
-type Engine struct {
+// Instance implements of Instance interface
+type Instance struct {
 	options *Options          // options for the event loop
 	schemas []internal.Schema // schema for acceptors
 	router  *Router           // router for handlers
@@ -31,11 +16,11 @@ type Engine struct {
 	thread  *Thread           //
 }
 
-// New returns a new eng instance
-func New(setters ...Option) Instance {
+// New returns a new instance instance
+func New(setters ...Option) *Instance {
 	options := completeOptions(setters...)
 
-	return &Engine{
+	return &Instance{
 		options: options,
 		reactor: options.NewReactorOrDie(),
 		router:  options.NewRouter(),
@@ -44,38 +29,36 @@ func New(setters ...Option) Instance {
 }
 
 // ListenTCP listens for tcp connections
-func (eng *Engine) ListenTCP(addr string) {
-	eng.schemas = append(eng.schemas, internal.NewSchema(internal.TCP, addr, eng.options.Acceptor))
+func (instance *Instance) ListenTCP(addr string) {
+	instance.schemas = append(instance.schemas, internal.NewSchema(internal.TCP, addr, instance.options.Acceptor))
 }
 
 // ListenWebsocket listens for websocket connections
-func (eng *Engine) ListenWebsocket(addr string) {
-	eng.schemas = append(eng.schemas, internal.NewSchema(internal.WEBSOCKET, addr, eng.options.Acceptor))
+func (instance *Instance) ListenWebsocket(addr string) {
+	instance.schemas = append(instance.schemas, internal.NewSchema(internal.WEBSOCKET, addr, instance.options.Acceptor))
 }
 
 // Router return instance of Router
-func (eng *Engine) Router() *Router {
-	return eng.router
+func (instance *Instance) Router() *Router {
+	return instance.router
 }
 
 // Run starts the event-loop
-func (eng *Engine) Run(stopCh <-chan struct{}) error {
-	if err := eng.options.Validate(); err != nil {
+func (instance *Instance) Run(stopCh <-chan struct{}) error {
+	if err := instance.options.Validate(); err != nil {
 		return err
 	}
-	if len(eng.schemas) == 0 {
-		return errors.New("please listen one protocol at least")
+	if len(instance.schemas) == 0 {
+		return errors.New("there are no listeners available")
 	}
 
-	// compose work flow functions
-	// decode request -> compute request -> encode response
-	eng.thread.Use(eng.options.Middlewares...)
-	eng.thread.Use(eng.router.handleRequest)
+	instance.thread.Use(instance.options.Middlewares...)
+	instance.thread.Use(instance.router.handleRequest)
 
 	// start listeners
-	schemaSignal := make(chan struct{})
-	defer close(schemaSignal)
-	if err := eng.startListenSchemas(schemaSignal); err != nil {
+	listenerSignal := make(chan struct{})
+	defer close(listenerSignal)
+	if err := instance.startListenSchemas(listenerSignal); err != nil {
 		return err
 	}
 
@@ -84,20 +67,19 @@ func (eng *Engine) Run(stopCh <-chan struct{}) error {
 	defer close(reactorSignal)
 	go func() {
 		defer runtime.HandleCrash()
-		eng.startEventLoop(reactorSignal)
+		instance.reactor.Run(reactorSignal, instance.thread.HandleRequest)
 	}()
 
-	runtime.WaitClose(stopCh, eng.shutdown)
+	runtime.WaitClose(stopCh, instance.shutdown)
 	return nil
 }
 
 // =====================private methods =================
-
-func (eng *Engine) startListenSchemas(signal <-chan struct{}) error {
+func (instance *Instance) startListenSchemas(signal <-chan struct{}) error {
 	// prepare servers
-	for _, schema := range eng.schemas {
+	for _, schema := range instance.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(signal, eng.reactor.initializeConnection); err != nil {
+		if err := schema.Listen(signal, instance.reactor.initializeConnection); err != nil {
 			return err
 		}
 
@@ -106,10 +88,6 @@ func (eng *Engine) startListenSchemas(signal <-chan struct{}) error {
 	return nil
 }
 
-func (eng *Engine) startEventLoop(signal <-chan struct{}) {
-	eng.reactor.Run(signal, eng.thread.HandleRequest)
-}
-
-func (eng *Engine) shutdown() {
+func (instance *Instance) shutdown() {
 	log.Println("server shutdown complete")
 }

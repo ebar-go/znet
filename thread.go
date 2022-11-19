@@ -9,44 +9,45 @@ import (
 
 // Thread represents context manager
 type Thread struct {
-	options       ThreadOptions
-	codec         codec.Codec
-	worker        pool.WorkerPool
-	contextEngine *ContextEngine
+	options ThreadOptions
+	codec   codec.Codec
+	worker  pool.WorkerPool
+	engine  *Engine
 }
 
 // NewThread returns a new Thread instance
 func NewThread(options ThreadOptions) *Thread {
-	thread := &Thread{
+	return &Thread{
 		options: options,
 		codec:   options.NewCodec(),
 		worker:  options.NewWorkerPool(),
-
-		contextEngine: NewContextEngine(),
+		engine:  NewEngine(),
 	}
-
-	return thread
 }
 
 // Use registers middleware
 func (thread *Thread) Use(handler ...HandleFunc) {
-	thread.contextEngine.handleChains = append(thread.contextEngine.handleChains, handler...)
+	thread.engine.handleChains = append(thread.engine.handleChains, handler...)
 }
 
 // HandleRequest handle new request for connection
 func (thread *Thread) HandleRequest(conn *Connection) {
 	// read message from connection
-	p, err := thread.read(conn)
+	msg, err := thread.read(conn, true)
 	if err != nil {
 		log.Printf("[%s] read failed: %v\n", conn.ID(), err)
+		// put back immediately when read failed
+		pool.PutByte(msg)
 		conn.Close()
 		return
 	}
 
 	// decode packet from message
-	packet, err := thread.decode(p)
+	packet, err := thread.decode(msg)
 	if err != nil {
 		log.Printf("[%s] decode failed: %v\n", conn.ID(), err)
+		// put back immediately when read failed
+		pool.PutByte(msg)
 		conn.Close()
 		return
 	}
@@ -54,36 +55,35 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 	// compute
 	thread.worker.Schedule(func() {
 		defer runtime.HandleCrash()
-		defer pool.PutByte(p)
+		defer pool.PutByte(msg)
 
 		// acquire context from provider
-		ctx := thread.contextEngine.AcquireAndResetContext(conn, packet)
-		defer thread.contextEngine.ReleaseContext(ctx)
+		ctx := thread.engine.AcquireAndResetContext(conn, packet)
+		defer thread.engine.ReleaseContext(ctx)
 
-		thread.contextEngine.invoke(ctx, 0)
+		thread.engine.invoke(ctx, 0)
 	})
 
 }
 
 // ------------------------private methods------------------------
-func (thread *Thread) read(conn *Connection) (p []byte, err error) {
-	bytes := pool.GetByte(thread.options.MaxReadBufferSize)
-	n, err := conn.Read(bytes)
-	if err != nil {
-		// put back immediately when read failed
-		pool.PutByte(bytes)
-		return
+func (thread *Thread) read(conn *Connection, allocFromPool bool) (p []byte, err error) {
+	var bytes []byte
+	if allocFromPool {
+		bytes = pool.GetByte(thread.options.MaxReadBufferSize)
+	} else {
+		bytes = make([]byte, thread.options.MaxReadBufferSize)
 	}
-	p = bytes[:n]
+
+	n, err := conn.Read(bytes)
+	if err == nil {
+		p = bytes[:n]
+	}
 	return
 }
 
 func (thread *Thread) decode(p []byte) (packet *codec.Packet, err error) {
 	packet = codec.NewPacket(thread.codec)
 	err = packet.Unpack(p)
-	if err != nil {
-		// put back immediately when unpack failed
-		pool.PutByte(p)
-	}
 	return
 }

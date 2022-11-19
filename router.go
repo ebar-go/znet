@@ -49,14 +49,7 @@ func (router *Router) OnNotFound(handler HandleFunc) *Router {
 	return router
 }
 
-// OnError is called when an error is encountered while processing a request
-func (router *Router) OnError(handler func(ctx *Context, err error)) *Router {
-	router.errorHandler = handler
-	return router
-}
-
-//==================private methods================
-
+// ==================private methods================
 func (router *Router) handleRequest(ctx *Context) {
 	// match handler
 	handler, ok := router.handlers.Get(ctx.Packet().Action)
