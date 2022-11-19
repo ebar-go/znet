@@ -3,6 +3,7 @@ package acceptor
 import (
 	"github.com/ebar-go/ego/errors"
 	"github.com/ebar-go/ego/utils/runtime"
+	"github.com/ebar-go/znet/codec"
 	"log"
 	"net"
 )
@@ -71,7 +72,7 @@ func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
 				continue
 			}
 
-			acceptor.base.handler(&LengthFieldBasedFrameDecoder{Conn: conn, offset: 4, endian: acceptor.options.Endian})
+			acceptor.base.handler(codec.NewLengthFieldBasedFromDecoder(conn, acceptor.options.LengthOffset))
 		}
 	}
 

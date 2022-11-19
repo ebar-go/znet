@@ -2,6 +2,7 @@ package acceptor
 
 import (
 	"github.com/ebar-go/ego/utils/runtime"
+	"github.com/ebar-go/znet/codec"
 	"github.com/gobwas/ws"
 	"log"
 	"net"
@@ -54,7 +55,7 @@ func (acceptor *WebsocketAcceptor) accept(ln net.Listener) {
 				log.Printf("upgrade(\"%s\") error(%v)", conn.RemoteAddr().String(), err)
 				continue
 			}
-			acceptor.base.handler(&websocketDecoder{Conn: conn})
+			acceptor.base.handler(codec.NewWebsocketDecoder(conn))
 		}
 
 	}

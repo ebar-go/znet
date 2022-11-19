@@ -1,4 +1,4 @@
-package acceptor
+package codec
 
 import (
 	"errors"
@@ -16,11 +16,11 @@ type LengthFieldBasedFrameDecoder struct {
 	endian binary.Endian
 }
 
-func NewLengthFieldBasedFromDecoder(conn net.Conn, offset int, endian binary.Endian) net.Conn {
+func NewLengthFieldBasedFromDecoder(conn net.Conn, offset int) net.Conn {
 	return &LengthFieldBasedFrameDecoder{
 		Conn:   conn,
 		offset: offset,
-		endian: endian,
+		endian: defaultEndian,
 	}
 }
 
@@ -60,7 +60,7 @@ type websocketDecoder struct {
 	isClient bool
 }
 
-func NewWebsocketDecoder(conn net.Conn) *websocketDecoder {
+func NewWebsocketDecoder(conn net.Conn) net.Conn {
 	return &websocketDecoder{Conn: conn}
 }
 

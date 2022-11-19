@@ -5,8 +5,6 @@ import (
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
-	"github.com/ebar-go/znet/internal/acceptor"
-	"github.com/gobwas/ws"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -46,14 +44,14 @@ func TestNew(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	//conn, err := net.Dial("tcp", "localhost:8081") // tcp
-	conn, _, _, err := ws.Dial(context.Background(), "ws://127.0.0.1:8082") // websocket
+	conn, err := net.Dial("tcp", "localhost:8081") // tcp
+	//conn, _, _, err := ws.Dial(context.Background(), "ws://127.0.0.1:8082") // websocket
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	//decoder := acceptor.NewLengthFieldBasedFromDecoder(conn, 4, binary.BigEndian())
-	decoder := acceptor.NewWebsocketClientDecoder(conn) // websocket
+	decoder := codec.NewLengthFieldBasedFromDecoder(conn, 4)
+	//decoder := codec.NewWebsocketClientDecoder(conn) // websocket
 	go func() {
 		bytes := pool.GetByte(512)
 		defer pool.PutByte(bytes)
