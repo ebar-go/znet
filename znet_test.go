@@ -2,10 +2,11 @@ package znet
 
 import (
 	"context"
+	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
+	"github.com/ebar-go/znet/internal/acceptor"
 	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -44,57 +45,26 @@ func TestNew(t *testing.T) {
 
 }
 
-func TestWebsocketClient(t *testing.T) {
-	conn, _, _, err := ws.Dial(context.Background(), "ws://127.0.0.1:8082")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	go func() {
-		for {
-			bytes, err := wsutil.ReadServerBinary(conn)
-			if err != nil {
-				log.Println("read error", time.Now().UnixMicro(), err)
-				return
-			}
-			log.Println("receive response: ", string(bytes))
-		}
-	}()
-
-	packet := codec.NewPacket(codec.NewJsonCodec())
-	packet.Action = 1
-	packet.Seq = 1
-
-	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
-	p, _ := packet.Pack()
-
-	log.Printf("packet length=%d, str=%s\n", len(p), string(p))
-
-	go func() {
-		for {
-			err := wsutil.WriteClientBinary(conn, p)
-			log.Println(err)
-			time.Sleep(time.Second * 3)
-		}
-	}()
-	select {}
-}
-
 func TestClient(t *testing.T) {
-	conn, err := net.Dial("tcp", "localhost:8081")
+	//conn, err := net.Dial("tcp", "localhost:8081") // tcp
+	conn, _, _, err := ws.Dial(context.Background(), "ws://127.0.0.1:8082") // websocket
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	decoder := codec.NewDecoder(4)
 
+	//decoder := acceptor.NewLengthFieldBasedFromDecoder(conn, 4, binary.BigEndian())
+	decoder := acceptor.NewWebsocketClientDecoder(conn) // websocket
 	go func() {
+		bytes := pool.GetByte(512)
+		defer pool.PutByte(bytes)
 		for {
-			bytes, err := decoder.Decode(conn)
+			n, err := decoder.Read(bytes)
+
 			if err != nil {
 				log.Println("read error", time.Now().UnixMicro(), err)
 				return
 			}
-			log.Println("receive response: ", string(bytes))
+			log.Println("receive response: ", string(bytes[:n]))
 		}
 	}()
 
@@ -109,7 +79,7 @@ func TestClient(t *testing.T) {
 
 	go func() {
 		for {
-			n, err := decoder.Encode(conn, p)
+			n, err := decoder.Write(p)
 			log.Println(n, err)
 			time.Sleep(time.Second * 3)
 		}

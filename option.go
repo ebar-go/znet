@@ -49,9 +49,6 @@ func (options ThreadOptions) NewWorkerPool() pool.WorkerPool {
 	})
 }
 
-func (options ThreadOptions) NewDecoder() codec.Decoder {
-	return codec.NewDecoder(options.packetLengthSize)
-}
 func (options ThreadOptions) NewCodec() (cc codec.Codec) {
 	cc = codec.NewJsonCodec()
 	if options.ContentType == ContentTypeProto {

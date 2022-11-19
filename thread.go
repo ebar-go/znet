@@ -11,7 +11,6 @@ import (
 type Thread struct {
 	options       ThreadOptions
 	codec         codec.Codec
-	decoder       codec.Decoder
 	worker        pool.WorkerPool
 	contextEngine *ContextEngine
 }
@@ -21,7 +20,6 @@ func NewThread(options ThreadOptions) *Thread {
 	thread := &Thread{
 		options: options,
 		codec:   options.NewCodec(),
-		decoder: options.NewDecoder(),
 		worker:  options.NewWorkerPool(),
 
 		contextEngine: NewContextEngine(),

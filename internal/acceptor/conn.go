@@ -16,6 +16,14 @@ type LengthFieldBasedFrameDecoder struct {
 	endian binary.Endian
 }
 
+func NewLengthFieldBasedFromDecoder(conn net.Conn, offset int, endian binary.Endian) net.Conn {
+	return &LengthFieldBasedFrameDecoder{
+		Conn:   conn,
+		offset: offset,
+		endian: endian,
+	}
+}
+
 // SyscallConn prepare for epoll
 func (c *LengthFieldBasedFrameDecoder) SyscallConn() (syscall.RawConn, error) {
 	return c.Conn.(syscall.Conn).SyscallConn()
@@ -49,6 +57,15 @@ func (decoder *LengthFieldBasedFrameDecoder) Write(buf []byte) (n int, err error
 
 type websocketDecoder struct {
 	net.Conn
+	isClient bool
+}
+
+func NewWebsocketDecoder(conn net.Conn) *websocketDecoder {
+	return &websocketDecoder{Conn: conn}
+}
+
+func NewWebsocketClientDecoder(conn net.Conn) *websocketDecoder {
+	return &websocketDecoder{Conn: conn, isClient: true}
 }
 
 // SyscallConn prepare for epoll
@@ -57,7 +74,13 @@ func (c *websocketDecoder) SyscallConn() (syscall.RawConn, error) {
 }
 
 func (c *websocketDecoder) Read(p []byte) (n int, err error) {
-	buf, err := wsutil.ReadClientBinary(c.Conn)
+	var buf []byte
+	if c.isClient {
+		buf, err = wsutil.ReadServerBinary(c.Conn)
+	} else {
+		buf, err = wsutil.ReadClientBinary(c.Conn)
+	}
+
 	if err != nil {
 		return
 	}
@@ -66,7 +89,12 @@ func (c *websocketDecoder) Read(p []byte) (n int, err error) {
 }
 
 func (c *websocketDecoder) Write(p []byte) (n int, err error) {
-	err = wsutil.WriteServerBinary(c.Conn, p)
+	if c.isClient {
+		err = wsutil.WriteClientBinary(c.Conn, p)
+	} else {
+		err = wsutil.WriteServerBinary(c.Conn, p)
+	}
+
 	if err != nil {
 		return
 	}
