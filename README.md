@@ -29,7 +29,7 @@ import (
 )
 
 const(
-	OperateFoo = 1 // define a foo operate
+	ActionFoo = 1 // define a foo operate
 )
 
 func main() {
@@ -41,9 +41,9 @@ func main() {
 	instance.ListenWebsocket(":8082")
     
 	// register a router for some operate
-	instance.Router().Route(OperateFoo, func(ctx *znet.Context) (any, error) {
+	instance.Router().Route(ActionFoo, func(ctx *znet.Context) (any, error) {
 		// return response to the client
-		return map[string]any{"val": "bar"}, nil
+		return map[string]any{"foo": "bar"}, nil
 	})
 	
 	// run the instance, graceful stop by ctrl-c.
@@ -51,56 +51,6 @@ func main() {
 }
 
 ```
-
-- go run client.go
-
-```go
-// client.go
-package main
-
-import (
-  "github.com/ebar-go/znet/codec"
-  "log"
-  "net"
-  "time"
-)
-
-func main() {
-  conn, err := net.Dial("tcp", "localhost:8081")
-  if err != nil {
-    log.Fatalf("unexpected error: %v", err)
-  }
-
-  decoder := codec.NewDecoder(4)
-
-  go func() {
-    for {
-      bytes, err := decoder.Decode(conn)
-      if err != nil {
-        return
-      }
-      log.Println("receive response: ", string(bytes[:n]))
-    }
-  }()
-
-  packet := codec.NewPacket(codec.NewJsonCodec())
-  packet.Action = 1
-  packet.Seq = 1
-
-  _ = packet.Marshal(map[string]interface{}{"foo": "bar"})
-  bytes, _ := packet.Pack()
-  
-  for {
-    n, err := decoder.Encode(conn, bytes)
-    if err != nil {
-      break
-    }
-    log.Println("send message length=", n)
-    time.Sleep(time.Second)
-  }
-}
-```
-
 
 ## Architecture
 - Framework
@@ -110,12 +60,20 @@ func main() {
 
 
 ## Protocol
-- We design the protocol for solve TCP sticky packet problem
-- ByteOrder: big endian
+- TCP 
+We design the protocol for solve TCP sticky packet problem
 ```
 |-------------- header --------------|-------- body --------|
 |packetLength| action |      seq     |-------- body --------|
 |     4      |    2   |       2      |          n           |
+```
+
+- Websocket
+websocket don't need the packet length
+```
+|-------------- header --------------|-------- body --------|
+|        action       |      seq     |-------- body --------|
+|           2         |       2      |          n           |
 ```
 
 ## Benchmark
