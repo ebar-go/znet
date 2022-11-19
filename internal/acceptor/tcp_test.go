@@ -9,7 +9,7 @@ import (
 
 func TestNewTCPAcceptor(t *testing.T) {
 	type args struct {
-		options *Options
+		options Options
 		handler func(conn net.Conn)
 	}
 	tests := []struct {

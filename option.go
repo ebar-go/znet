@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/znet/codec"
+	"github.com/ebar-go/znet/internal/acceptor"
 	"time"
 )
 
@@ -28,6 +29,8 @@ type Options struct {
 	Reactor ReactorOptions
 
 	Thread ThreadOptions
+
+	Acceptor acceptor.Options
 }
 
 type ThreadOptions struct {
@@ -128,11 +131,12 @@ type Option func(options *Options)
 
 func defaultOptions() *Options {
 	return &Options{
-		Debug:   false,
-		OnOpen:  func(conn *Connection) {},
-		OnClose: func(conn *Connection) {},
-		Reactor: defaultReactorOptions(),
-		Thread:  defaultThreadOptions(),
+		Debug:    false,
+		OnOpen:   func(conn *Connection) {},
+		OnClose:  func(conn *Connection) {},
+		Reactor:  defaultReactorOptions(),
+		Thread:   defaultThreadOptions(),
+		Acceptor: acceptor.DefaultOptions(),
 	}
 }
 

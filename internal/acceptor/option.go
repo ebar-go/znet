@@ -15,8 +15,8 @@ type Options struct {
 	LengthOffset    int
 }
 
-func DefaultOptions() *Options {
-	return &Options{
+func DefaultOptions() Options {
+	return Options{
 		Core:            runtime.NumCPU(),
 		ReadBufferSize:  4096,
 		WriteBufferSize: 4096,

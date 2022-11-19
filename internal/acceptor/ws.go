@@ -11,7 +11,7 @@ import (
 // WebsocketAcceptor represents websocket acceptor
 type WebsocketAcceptor struct {
 	base    *Acceptor
-	options *Options
+	options Options
 	upgrade ws.Upgrader
 }
 
@@ -62,7 +62,7 @@ func (acceptor *WebsocketAcceptor) accept(ln net.Listener) {
 }
 
 // NewWSAcceptor return a new instance of the WebsocketAcceptor
-func NewWSAcceptor(options *Options, handler func(conn net.Conn)) *WebsocketAcceptor {
+func NewWSAcceptor(options Options, handler func(conn net.Conn)) *WebsocketAcceptor {
 	return &WebsocketAcceptor{
 		base:    NewAcceptor(handler),
 		options: options,

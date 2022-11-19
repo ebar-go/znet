@@ -11,7 +11,7 @@ import (
 // TCPAcceptor represents tcp acceptor
 type TCPAcceptor struct {
 	base    *Acceptor
-	options *Options
+	options Options
 }
 
 // Run runs the acceptor
@@ -79,7 +79,7 @@ func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
 }
 
 // NewTCPAcceptor returns a new instance of the TCPAcceptor
-func NewTCPAcceptor(options *Options, handler func(conn net.Conn)) *TCPAcceptor {
+func NewTCPAcceptor(options Options, handler func(conn net.Conn)) *TCPAcceptor {
 	return &TCPAcceptor{
 		base:    NewAcceptor(handler),
 		options: options,

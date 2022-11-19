@@ -16,6 +16,7 @@ const (
 type Schema struct {
 	Protocol string
 	Addr     string
+	options  acceptor.Options
 }
 
 // String returns a string representation of the schema
@@ -26,13 +27,12 @@ func (schema Schema) String() string {
 // Listen run acceptor with handler
 func (schema Schema) Listen(stopCh <-chan struct{}, handler func(conn net.Conn)) error {
 	var instance acceptor.Instance
-	options := acceptor.DefaultOptions()
 
 	switch schema.Protocol {
 	case TCP:
-		instance = acceptor.NewTCPAcceptor(options, handler)
+		instance = acceptor.NewTCPAcceptor(schema.options, handler)
 	case WEBSOCKET:
-		instance = acceptor.NewWSAcceptor(options, handler)
+		instance = acceptor.NewWSAcceptor(schema.options, handler)
 	default:
 		return fmt.Errorf("unsupported protocol: %v", schema.Protocol)
 	}
@@ -44,9 +44,10 @@ func (schema Schema) Listen(stopCh <-chan struct{}, handler func(conn net.Conn))
 	return instance.Run(schema.Addr)
 }
 
-func NewSchema(protocol string, addr string) Schema {
+func NewSchema(protocol string, addr string, options acceptor.Options) Schema {
 	return Schema{
 		Protocol: protocol,
 		Addr:     addr,
+		options:  options,
 	}
 }

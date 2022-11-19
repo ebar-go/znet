@@ -45,12 +45,12 @@ func New(setters ...Option) Instance {
 
 // ListenTCP listens for tcp connections
 func (eng *Engine) ListenTCP(addr string) {
-	eng.schemas = append(eng.schemas, internal.NewSchema(internal.TCP, addr))
+	eng.schemas = append(eng.schemas, internal.NewSchema(internal.TCP, addr, eng.options.Acceptor))
 }
 
 // ListenWebsocket listens for websocket connections
 func (eng *Engine) ListenWebsocket(addr string) {
-	eng.schemas = append(eng.schemas, internal.NewSchema(internal.WEBSOCKET, addr))
+	eng.schemas = append(eng.schemas, internal.NewSchema(internal.WEBSOCKET, addr, eng.options.Acceptor))
 }
 
 // Router return instance of Router
