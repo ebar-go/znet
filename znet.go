@@ -5,7 +5,6 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal"
 	"log"
-	"net"
 )
 
 // Instance represents an eng interface
@@ -98,14 +97,7 @@ func (eng *Engine) startListenSchemas(signal <-chan struct{}) error {
 	// prepare servers
 	for _, schema := range eng.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(signal, func(conn net.Conn) {
-			// this callback will be invoked when the connection is established
-
-			// create instance of Connection
-			connection := NewConnection(conn, eng.reactor.poll.SocketFD(conn))
-			// initialize this new connection by reactor
-			eng.reactor.initializeConnection(connection)
-		}); err != nil {
+		if err := schema.Listen(signal, eng.reactor.initializeConnection); err != nil {
 			return err
 		}
 

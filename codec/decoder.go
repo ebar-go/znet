@@ -10,8 +10,6 @@ import (
 type Decoder interface {
 	Decode(reader io.Reader) (buf []byte, err error)
 	Encode(writer io.Writer, buf []byte) (n int, err error)
-
-	DecodeBytes(bytes []byte) (buf []byte, err error)
 }
 
 // LengthFieldBasedFrameDecode implements Decoder interface by decode length field
@@ -46,16 +44,6 @@ func (decoder *LengthFieldBasedFrameDecode) Decode(reader io.Reader) (buf []byte
 	buf = make([]byte, length)
 	_, err = io.ReadFull(reader, buf)
 	return
-}
-
-func (decoder *LengthFieldBasedFrameDecode) DecodeBytes(bytes []byte) (buf []byte, err error) {
-	length := int(decoder.endian.Int32(bytes[:decoder.offset]))
-	if length <= 0 || length > len(bytes)-decoder.offset {
-		err = errors.New("packet exceeded, connection may be closed")
-		return
-	}
-
-	return bytes[decoder.offset:length], nil
 }
 
 func (decoder *LengthFieldBasedFrameDecode) Encode(writer io.Writer, buf []byte) (n int, err error) {

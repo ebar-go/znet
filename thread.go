@@ -9,6 +9,7 @@ import (
 
 // Thread represents context manager
 type Thread struct {
+	options       ThreadOptions
 	codec         codec.Codec
 	decoder       codec.Decoder
 	worker        pool.WorkerPool
@@ -18,6 +19,7 @@ type Thread struct {
 // NewThread returns a new Thread instance
 func NewThread(options ThreadOptions) *Thread {
 	thread := &Thread{
+		options: options,
 		codec:   options.NewCodec(),
 		decoder: options.NewDecoder(),
 		worker:  options.NewWorkerPool(),
@@ -36,26 +38,19 @@ func (thread *Thread) Use(handler ...HandleFunc) {
 // HandleRequest handle new request for connection
 func (thread *Thread) HandleRequest(conn *Connection) {
 	var (
-		msg      []byte
-		err      error
-		callback = func() {}
-		n        int
+		bytes  = pool.GetByte(thread.options.MaxReadBufferSize)
+		packet = thread.newPacket()
 	)
 
-	bytes := make([]byte, 512)
-	n, err = conn.Read(bytes)
-
+	n, err := conn.Read(bytes)
 	// close the connection when read failed
 	if err != nil {
 		log.Printf("[%s] read: %v\n", conn.ID(), err)
 		conn.Close()
-		callback()
 		return
 	}
 
-	msg = bytes[:n]
-	packet := thread.newPacket()
-	err = packet.Unpack(msg)
+	err = packet.Unpack(bytes[:n])
 	if err != nil {
 		log.Printf("[%s] decode: %v\n", conn.ID(), err)
 		conn.Close()

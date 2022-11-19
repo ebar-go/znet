@@ -4,6 +4,7 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/internal/poller"
 	"log"
+	"net"
 )
 
 // Reactor represents the epoll model for listen connections.
@@ -81,9 +82,13 @@ func (reactor *Reactor) wrapHandler(handler ConnectionHandler) func(active int) 
 	}
 }
 
-func (reactor *Reactor) initializeConnection(connection *Connection) {
+// initializeConnection this callback will be invoked when the connection is established
+func (reactor *Reactor) initializeConnection(conn net.Conn) {
+	// create instance of Connection
+	connection := NewConnection(conn, reactor.poll.SocketFD(conn))
 	if err := reactor.poll.Add(connection.fd); err != nil {
 		connection.Close()
+		log.Println("poll.Add failed: ", connection.fd, err)
 		return
 	}
 

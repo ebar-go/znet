@@ -2,10 +2,7 @@ package acceptor
 
 import (
 	"github.com/ebar-go/ego/errors"
-	"github.com/ebar-go/ego/utils/binary"
-	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/ego/utils/runtime"
-	"io"
 	"log"
 	"net"
 )
@@ -74,7 +71,7 @@ func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
 				continue
 			}
 
-			acceptor.base.handler(&tcpConnAdapter{Conn: conn, offset: 4, endian: binary.BigEndian()})
+			acceptor.base.handler(&LengthFieldBasedFrameDecoder{Conn: conn, offset: 4, endian: acceptor.options.Endian})
 		}
 	}
 
@@ -86,30 +83,4 @@ func NewTCPAcceptor(options *Options, handler func(conn net.Conn)) *TCPAcceptor 
 		base:    NewAcceptor(handler),
 		options: options,
 	}
-}
-
-type tcpConnAdapter struct {
-	net.Conn
-	offset int
-	endian binary.Endian
-}
-
-func (a *tcpConnAdapter) Read(bytes []byte) (n int, err error) {
-	// read length field of packet
-	p := pool.GetByte(a.offset)
-	defer pool.PutByte(p)
-	_, err = io.ReadFull(a.Conn, p)
-
-	length := a.endian.Int32(p)
-	n, err = io.ReadFull(a.Conn, bytes[:length-4])
-	return
-}
-
-func (a *tcpConnAdapter) Write(buf []byte) (n int, err error) {
-	length := a.offset + len(buf)
-	p := pool.GetByte(length)
-	defer pool.PutByte(p)
-	a.endian.PutInt32(p[:a.offset], int32(length))
-	copy(p[a.offset:], buf)
-	return a.Conn.Write(p)
 }

@@ -1,6 +1,7 @@
 package acceptor
 
 import (
+	"github.com/ebar-go/ego/utils/binary"
 	"runtime"
 	"time"
 )
@@ -12,6 +13,7 @@ type Options struct {
 	Keepalive       bool
 	WriteDeadline   time.Duration
 	ReadDeadline    time.Duration
+	Endian          binary.Endian
 }
 
 func DefaultOptions() *Options {
@@ -22,5 +24,6 @@ func DefaultOptions() *Options {
 		Keepalive:       false,
 		WriteDeadline:   time.Second * 3,
 		ReadDeadline:    time.Second * 3,
+		Endian:          binary.BigEndian(),
 	}
 }
