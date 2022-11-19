@@ -70,7 +70,7 @@ func (eng *Engine) Run(stopCh <-chan struct{}) error {
 	// compose work flow functions
 	// decode request -> compute request -> encode response
 	eng.thread.Use(eng.options.Middlewares...)
-	eng.thread.Use(eng.router.handleRequest, eng.thread.encode(eng.router.handleError))
+	eng.thread.Use(eng.router.handleRequest, eng.thread.encode(eng.router.triggerErrorEvent))
 
 	// start listeners
 	schemaSignal := make(chan struct{})

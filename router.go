@@ -1,8 +1,8 @@
 package znet
 
 import (
+	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/ego/utils/structure"
-	"github.com/pkg/errors"
 )
 
 // Handler is a handler for operation
@@ -61,33 +61,34 @@ func (router *Router) handleRequest(ctx *Context) {
 	// match handler
 	handler, ok := router.handlers.Get(ctx.Packet().Action)
 	if !ok {
-		router.handleNotFound(ctx)
+		router.triggerNotFoundEvent(ctx)
 		ctx.Abort()
 		return
 	}
 
-	response, err := handler(ctx)
-	if err != nil {
-		router.handleError(ctx, errors.WithMessage(err, "handle operation"))
+	var response any
+
+	lastErr := runtime.Call(func() (err error) {
+		response, err = handler(ctx)
+		return
+	}, func() error {
+		return ctx.packet.Marshal(response)
+	})
+	if lastErr != nil {
+		router.triggerErrorEvent(ctx, lastErr)
 		ctx.Abort()
 		return
 	}
 
-	err = ctx.packet.Marshal(response)
-	if err != nil {
-		router.handleError(ctx, errors.WithMessage(err, "invalid response"))
-		ctx.Abort()
-		return
-	}
 	ctx.Next()
 }
 
-func (router *Router) handleError(ctx *Context, err error) {
+func (router *Router) triggerErrorEvent(ctx *Context, err error) {
 	if router.errorHandler != nil {
 		router.errorHandler(ctx, err)
 	}
 }
-func (router *Router) handleNotFound(ctx *Context) {
+func (router *Router) triggerNotFoundEvent(ctx *Context) {
 	if router.notFoundHandler != nil {
 		router.notFoundHandler(ctx)
 	}
