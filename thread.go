@@ -53,7 +53,7 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 		return
 	}
 
-	// start schedule task
+	// compute
 	thread.worker.Schedule(func() {
 		defer runtime.HandleCrash()
 		defer pool.PutByte(p)
@@ -88,39 +88,4 @@ func (thread *Thread) decode(p []byte) (packet *codec.Packet, err error) {
 		pool.PutByte(p)
 	}
 	return
-}
-
-func (thread *Thread) compute(onError func(*Context, error), handler Handler) HandleFunc {
-	return func(ctx *Context) {
-		var response any
-
-		lastErr := runtime.Call(func() (err error) {
-			response, err = handler(ctx)
-			return
-		}, func() error {
-			return ctx.packet.Marshal(response)
-		})
-
-		if lastErr != nil {
-			onError(ctx, lastErr)
-			ctx.Abort()
-			return
-		}
-
-		ctx.Next()
-	}
-}
-func (thread *Thread) encode(errorHandler func(*Context, error)) HandleFunc {
-	return func(ctx *Context) {
-		// pack response
-		msg, err := ctx.packet.Pack()
-		if err != nil {
-			errorHandler(ctx, err)
-			return
-		}
-
-		if _, err = ctx.Conn().Write(msg); err != nil {
-			errorHandler(ctx, err)
-		}
-	}
 }

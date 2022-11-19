@@ -16,6 +16,10 @@ type LengthFieldBasedFrameDecoder struct {
 	endian binary.Endian
 }
 
+// SyscallConn prepare for epoll
+func (c *LengthFieldBasedFrameDecoder) SyscallConn() (syscall.RawConn, error) {
+	return c.Conn.(syscall.Conn).SyscallConn()
+}
 func (decoder *LengthFieldBasedFrameDecoder) Read(bytes []byte) (n int, err error) {
 	// read length field of packet
 	p := pool.GetByte(decoder.offset)

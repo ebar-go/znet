@@ -66,14 +66,21 @@ func (router *Router) handleRequest(ctx *Context) {
 		return
 	}
 
-	var response any
+	var (
+		response any
+		msg      []byte
+	)
 
-	lastErr := runtime.Call(func() (err error) {
+	lastErr := runtime.Call(func() (err error) { // compute
 		response, err = handler(ctx)
 		return
-	}, func() error {
+	}, func() error { // encode
 		return ctx.packet.Marshal(response)
+	}, func() (err error) { // pack
+		msg, err = ctx.packet.Pack()
+		return
 	})
+
 	if lastErr != nil {
 		router.triggerErrorEvent(ctx, lastErr)
 		ctx.Abort()
@@ -81,6 +88,8 @@ func (router *Router) handleRequest(ctx *Context) {
 	}
 
 	ctx.Next()
+
+	ctx.Conn().Write(msg)
 }
 
 func (router *Router) triggerErrorEvent(ctx *Context, err error) {
