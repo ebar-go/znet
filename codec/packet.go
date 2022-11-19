@@ -42,7 +42,7 @@ func (p *Packet) Pack() ([]byte, error) {
 func (p *Packet) Unpack(msg []byte) error {
 	options := p.options
 	if len(msg) < options.headerOffset {
-		return errors.New("msg too short")
+		return errors.New("msg is too short")
 	}
 	p.Action = options.endian.Int16(msg[0:options.actionOffset])
 	p.Seq = options.endian.Int16(msg[options.actionOffset:options.seqOffset])

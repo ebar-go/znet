@@ -38,22 +38,26 @@ func (thread *Thread) Use(handler ...HandleFunc) {
 // HandleRequest handle new request for connection
 func (thread *Thread) HandleRequest(conn *Connection) {
 	var (
-		bytes  = pool.GetByte(thread.options.MaxReadBufferSize)
-		packet = thread.newPacket()
+		bytes    = pool.GetByte(thread.options.MaxReadBufferSize)
+		packet   = thread.newPacket()
+		callback = func() {
+			pool.PutByte(bytes)
+		}
 	)
 
-	n, err := conn.Read(bytes)
-	// close the connection when read failed
-	if err != nil {
-		log.Printf("[%s] read: %v\n", conn.ID(), err)
-		conn.Close()
-		return
-	}
+	err := func() (err error) {
+		n, err := conn.Read(bytes)
+		if err != nil {
+			return
+		}
 
-	err = packet.Unpack(bytes[:n])
+		return packet.Unpack(bytes[:n])
+	}()
+
 	if err != nil {
 		log.Printf("[%s] decode: %v\n", conn.ID(), err)
 		conn.Close()
+		callback()
 		return
 	}
 
