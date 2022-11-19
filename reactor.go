@@ -9,9 +9,8 @@ import (
 
 // Reactor represents the epoll model for listen connections.
 type Reactor struct {
-	poll     poller.Poller // use to listen active connections
-	sub      SubReactor    // manage connections
-	callback *Callback     // manage connections events
+	poll poller.Poller // use to listen active connections
+	sub  SubReactor    // manage connections
 }
 
 // NewReactor return a new main reactor instance
@@ -83,28 +82,31 @@ func (reactor *Reactor) wrapHandler(handler ConnectionHandler) func(active int) 
 }
 
 // initializeConnection this callback will be invoked when the connection is established
-func (reactor *Reactor) initializeConnection(conn net.Conn) {
-	// create instance of Connection
-	connection := NewConnection(conn, reactor.poll.SocketFD(conn))
-	if err := reactor.poll.Add(connection.fd); err != nil {
-		connection.Close()
-		log.Println("poll.Add failed: ", connection.fd, err)
-		return
+func (reactor *Reactor) initializeConnection(onOpen, onClose ConnectionHandler) func(conn net.Conn) {
+	return func(conn net.Conn) {
+		// create instance of Connection
+		connection := NewConnection(conn, reactor.poll.SocketFD(conn))
+		if err := reactor.poll.Add(connection.fd); err != nil {
+			connection.Close()
+			log.Println("poll.Add failed: ", connection.fd, err)
+			return
+		}
+
+		onOpen(connection)
+
+		reactor.sub.RegisterConnection(connection)
+
+		// those callback functions will be invoked before connection.Close()
+		connection.AddBeforeCloseHook(
+			// trigger disconnect callback
+			onClose,
+			// remove connection from epoll
+			func(conn *Connection) {
+				_ = reactor.poll.Remove(conn.fd)
+			},
+			// unregister connection from sub reactor
+			reactor.sub.UnregisterConnection,
+		)
 	}
 
-	reactor.callback.triggerOpenEvent(connection)
-
-	reactor.sub.RegisterConnection(connection)
-
-	// those callback functions will be invoked before connection.Close()
-	connection.AddBeforeCloseHook(
-		// trigger disconnect callback
-		reactor.callback.triggerCloseEvent,
-		// remove connection from epoll
-		func(conn *Connection) {
-			_ = reactor.poll.Remove(conn.fd)
-		},
-		// unregister connection from sub reactor
-		reactor.sub.UnregisterConnection,
-	)
 }

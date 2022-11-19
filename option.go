@@ -23,6 +23,9 @@ type Options struct {
 	// OnClose is a callback function that is called when the connection is closed
 	OnClose ConnectionHandler
 
+	// OnError is a callback function that is called when process error
+	OnError func(ctx *Context, err error)
+
 	// Middlewares is a lot of callback functions that are called when the connection send new message
 	Middlewares []HandleFunc
 
@@ -86,8 +89,15 @@ func (options *Options) NewReactorOrDie() *Reactor {
 	if err != nil {
 		panic(err)
 	}
-	reactor.callback = newCallback(options.OnOpen, options.OnClose)
 	return reactor
+}
+
+func (options *Options) NewCallback() *Callback {
+	return &Callback{
+		openHandler:  options.OnOpen,
+		closeHandler: options.OnClose,
+		errorHandler: options.OnError,
+	}
 }
 
 func (options *Options) NewThread() *Thread {

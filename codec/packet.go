@@ -50,3 +50,12 @@ func (p *Packet) Unpack(msg []byte) error {
 
 	return nil
 }
+
+func (p *Packet) Encode(data any) (msg []byte, err error) {
+	p.Body, err = p.codec.Marshal(data)
+	if err != nil {
+		return
+	}
+
+	return p.Pack()
+}

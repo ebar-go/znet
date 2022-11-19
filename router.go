@@ -1,7 +1,6 @@
 package znet
 
 import (
-	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/ego/utils/structure"
 )
 
@@ -50,46 +49,34 @@ func (router *Router) OnNotFound(handler HandleFunc) *Router {
 }
 
 // ==================private methods================
-func (router *Router) handleRequest(ctx *Context) {
-	// match handler
-	handler, ok := router.handlers.Get(ctx.Packet().Action)
-	if !ok {
-		router.triggerNotFoundEvent(ctx)
-		ctx.Abort()
-		return
+func (router *Router) handleRequest(onError func(ctx *Context, err error)) HandleFunc {
+	return func(ctx *Context) {
+		// match handler
+		handler, ok := router.handlers.Get(ctx.Packet().Action)
+		if !ok {
+			router.triggerNotFoundEvent(ctx)
+			ctx.Abort()
+			return
+		}
+
+		response, err := handler(ctx)
+		if err != nil {
+			onError(ctx, err)
+			return
+		}
+
+		msg, err := ctx.packet.Encode(response)
+		if err != nil {
+			onError(ctx, err)
+			return
+		}
+
+		ctx.Conn().Write(msg)
+
 	}
 
-	var (
-		response any
-		msg      []byte
-	)
-
-	lastErr := runtime.Call(func() (err error) { // compute
-		response, err = handler(ctx)
-		return
-	}, func() error { // encode
-		return ctx.packet.Marshal(response)
-	}, func() (err error) { // pack
-		msg, err = ctx.packet.Pack()
-		return
-	})
-
-	if lastErr != nil {
-		router.triggerErrorEvent(ctx, lastErr)
-		ctx.Abort()
-		return
-	}
-
-	ctx.Next()
-
-	ctx.Conn().Write(msg)
 }
 
-func (router *Router) triggerErrorEvent(ctx *Context, err error) {
-	if router.errorHandler != nil {
-		router.errorHandler(ctx, err)
-	}
-}
 func (router *Router) triggerNotFoundEvent(ctx *Context) {
 	if router.notFoundHandler != nil {
 		router.notFoundHandler(ctx)

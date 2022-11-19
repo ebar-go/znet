@@ -9,11 +9,12 @@ import (
 
 // Instance implements of Instance interface
 type Instance struct {
-	options *Options          // options for the event loop
-	schemas []internal.Schema // schema for acceptors
-	router  *Router           // router for handlers
-	reactor *Reactor          // reactor model
-	thread  *Thread           //
+	options  *Options          // options for the event loop
+	schemas  []internal.Schema // schema for acceptors
+	router   *Router           // router for handlers
+	reactor  *Reactor          // reactor model
+	thread   *Thread           //
+	callback *Callback
 }
 
 // New returns a new instance instance
@@ -21,10 +22,11 @@ func New(setters ...Option) *Instance {
 	options := completeOptions(setters...)
 
 	return &Instance{
-		options: options,
-		reactor: options.NewReactorOrDie(),
-		router:  options.NewRouter(),
-		thread:  options.NewThread(),
+		options:  options,
+		reactor:  options.NewReactorOrDie(),
+		router:   options.NewRouter(),
+		thread:   options.NewThread(),
+		callback: options.NewCallback(),
 	}
 }
 
@@ -53,7 +55,7 @@ func (instance *Instance) Run(stopCh <-chan struct{}) error {
 	}
 
 	instance.thread.Use(instance.options.Middlewares...)
-	instance.thread.Use(instance.router.handleRequest)
+	instance.thread.Use(instance.router.handleRequest(instance.callback.onError))
 
 	// start listeners
 	listenerSignal := make(chan struct{})
@@ -76,10 +78,14 @@ func (instance *Instance) Run(stopCh <-chan struct{}) error {
 
 // =====================private methods =================
 func (instance *Instance) startListenSchemas(signal <-chan struct{}) error {
+	handler := instance.reactor.initializeConnection(
+		instance.callback.onOpen,
+		instance.callback.onClose)
+
 	// prepare servers
 	for _, schema := range instance.schemas {
 		// listen with context and connection register callback function
-		if err := schema.Listen(signal, instance.reactor.initializeConnection); err != nil {
+		if err := schema.Listen(signal, handler); err != nil {
 			return err
 		}
 
