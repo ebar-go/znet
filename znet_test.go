@@ -3,7 +3,6 @@ package znet
 import (
 	"context"
 	"github.com/ebar-go/ego/utils/pool"
-	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/codec"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
@@ -16,15 +15,18 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	go func() {
-		runtime.ShowMemoryUsage()
-	}()
+	//go func() {
+	//	runtime.ShowMemoryUsage()
+	//}()
 	instance := New(func(options *Options) {
 		options.OnOpen = func(conn *Connection) {
 			log.Printf("[%s] connected", conn.ID())
 		}
 		options.OnClose = func(conn *Connection) {
 			log.Printf("[%s] disconnected:%d", conn.ID(), time.Now().UnixMicro())
+		}
+		options.OnError = func(ctx *Context, err error) {
+			log.Printf("[%s] error: %v", ctx.Conn().ID(), err)
 		}
 	})
 

@@ -60,16 +60,14 @@ func main() {
 
 
 ## Protocol
-- TCP 
-We design the protocol for solve TCP sticky packet problem
+- TCP : We design the protocol for sticky packet problem
 ```
 |-------------- header --------------|-------- body --------|
 |packetLength| action |      seq     |-------- body --------|
 |     4      |    2   |       2      |          n           |
 ```
 
-- Websocket
-websocket don't need the packet length
+- WebSocket : don't need the packet length
 ```
 |-------------- header --------------|-------- body --------|
 |        action       |      seq     |-------- body --------|
