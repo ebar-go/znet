@@ -24,21 +24,19 @@ func StandardHandler[Request, Response any](action Action[Request, Response]) Ha
 // Router represents router instance
 type Router struct {
 	handlers        *structure.ConcurrentMap[int16, Handler]
-	errorHandler    func(ctx *Context, err error)
 	notFoundHandler HandleFunc
 }
 
 func NewRouter() *Router {
 	return &Router{
 		handlers:        structure.NewConcurrentMap[int16, Handler](),
-		errorHandler:    nil,
 		notFoundHandler: nil,
 	}
 }
 
-// Route register handler for operate
-func (router *Router) Route(operate int16, handler Handler) *Router {
-	router.handlers.Set(operate, handler)
+// Route register handler for action
+func (router *Router) Route(action int16, handler Handler) *Router {
+	router.handlers.Set(action, handler)
 	return router
 }
 
@@ -55,7 +53,6 @@ func (router *Router) handleRequest(onError func(ctx *Context, err error)) Handl
 		handler, ok := router.handlers.Get(ctx.Packet().Action)
 		if !ok {
 			router.triggerNotFoundEvent(ctx)
-			ctx.Abort()
 			return
 		}
 

@@ -46,7 +46,7 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 	packet, err := thread.decode(msg)
 	if err != nil {
 		log.Printf("[%s] decode failed: %v\n", conn.ID(), err)
-		// put back immediately when read failed
+		// put back immediately when decode failed
 		pool.PutByte(msg)
 		conn.Close()
 		return
@@ -57,13 +57,8 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 		defer runtime.HandleCrash()
 		defer pool.PutByte(msg)
 
-		// acquire context from provider
-		ctx := thread.engine.AcquireAndResetContext(conn, packet)
-		defer thread.engine.ReleaseContext(ctx)
-
-		thread.engine.invoke(ctx, 0)
+		thread.engine.compute(conn, packet)
 	})
-
 }
 
 // ------------------------private methods------------------------

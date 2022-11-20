@@ -27,24 +27,21 @@ func (e *Engine) getProvider() internal.Provider[*Context] {
 	return e.contextProvider
 }
 
-func (e *Engine) AcquireAndResetContext(conn *Connection, packet *codec.Packet) *Context {
-	ctx := e.AcquireContext()
-	ctx.reset(conn, packet)
-	return ctx
-}
-
-func (e *Engine) AcquireContext() *Context {
-	return e.getProvider().Acquire()
-}
-
-func (e *Engine) ReleaseContext(ctx *Context) {
-	e.getProvider().Release(ctx)
-}
-
-// invokeContextHandler invoke context handler chain
+// invoke process context handler chain
 func (e *Engine) invoke(ctx *Context, index int8) {
 	if int(index) > len(e.handleChains)-1 {
 		return
 	}
 	e.handleChains[index](ctx)
+}
+
+// compute run invoke function with context
+func (e *Engine) compute(conn *Connection, packet *codec.Packet) {
+	provider := e.getProvider()
+	// acquire context from provider
+	ctx := provider.Acquire()
+	ctx.reset(conn, packet)
+	defer provider.Release(ctx)
+
+	e.invoke(ctx, 0)
 }

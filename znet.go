@@ -17,7 +17,7 @@ type Instance struct {
 	callback *Callback
 }
 
-// New returns a new instance instance
+// New returns a new instance
 func New(setters ...Option) *Instance {
 	options := completeOptions(setters...)
 
@@ -80,7 +80,8 @@ func (instance *Instance) Run(stopCh <-chan struct{}) error {
 func (instance *Instance) startListenSchemas(signal <-chan struct{}) error {
 	handler := instance.reactor.initializeConnection(
 		instance.callback.onOpen,
-		instance.callback.onClose)
+		instance.callback.onClose,
+	)
 
 	// prepare servers
 	for _, schema := range instance.schemas {
