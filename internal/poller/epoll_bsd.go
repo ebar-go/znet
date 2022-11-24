@@ -5,6 +5,7 @@ package poller
 
 import (
 	"net"
+	"reflect"
 	"sync"
 	"syscall"
 )
@@ -25,7 +26,7 @@ func NewPollerWithBuffer(count int) (Poller, error) {
 	}
 	_, err = syscall.Kevent(p, []syscall.Kevent_t{{
 		Ident:  0,
-		Filter: syscall.EVFILT_USER,
+		Filter: syscall.EVFILT_READ,
 		Flags:  syscall.EV_ADD | syscall.EV_CLEAR,
 	}}, nil, nil)
 	if err != nil {
@@ -49,8 +50,6 @@ func (e *epoll) Close() error {
 }
 
 func (e *epoll) Add(fd int) error {
-	fd := socketFD(conn)
-
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -100,11 +99,7 @@ retry:
 	var connections = e.connections[:0]
 	e.mu.RLock()
 	for i := 0; i < n; i++ {
-		conn := e.connections[int(e.events[i].Ident)]
-		if (e.events[i].Flags & syscall.EV_EOF) == syscall.EV_EOF {
-			conn.Close()
-		}
-		connections = append(connections, conn)
+		connections = append(connections, int(e.events[i].Ident))
 	}
 	e.mu.RUnlock()
 	return connections, nil

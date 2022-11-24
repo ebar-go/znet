@@ -26,8 +26,8 @@ func NewThread(options ThreadOptions) *Thread {
 }
 
 // Use registers middleware
-func (thread *Thread) Use(handler ...HandleFunc) {
-	thread.engine.handleChains = append(thread.engine.handleChains, handler...)
+func (thread *Thread) Use(handlers ...HandleFunc) {
+	thread.engine.Use(handlers...)
 }
 
 // HandleRequest handle new request for connection

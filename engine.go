@@ -18,6 +18,10 @@ func NewEngine() *Engine {
 	return &Engine{}
 }
 
+func (e *Engine) Use(handlers ...HandleFunc) {
+	e.handleChains = append(e.handleChains, handlers...)
+}
+
 func (e *Engine) getProvider() internal.Provider[*Context] {
 	e.once.Do(func() {
 		e.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {

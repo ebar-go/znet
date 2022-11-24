@@ -44,17 +44,13 @@ func (acceptor *TCPAcceptor) Shutdown() {
 
 // accept connection
 func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
-	var (
-		conn *net.TCPConn
-		err  error
-	)
-
 	for {
 		select {
 		case <-acceptor.base.Signal():
 			return
 		default:
-			if conn, err = lis.AcceptTCP(); err != nil {
+			conn, err := lis.AcceptTCP()
+			if err != nil {
 				// if listener close then return
 				log.Printf("listener.Accept(\"%s\") error(%v)", lis.Addr().String(), err)
 				continue
