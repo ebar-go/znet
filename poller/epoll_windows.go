@@ -3,7 +3,7 @@
 package poller
 
 import (
-	"github.com/ebar-go/znet/internal/poller/wepoll"
+	"github.com/ebar-go/znet/poller/wepoll"
 )
 
 func NewPollerWithBuffer(size int) (Poller, error) {

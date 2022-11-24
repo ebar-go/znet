@@ -9,7 +9,7 @@ import (
 // Instance represents a server for accepting connections
 type Instance interface {
 	Schema() Schema
-	// Run runs the thread that will receive the connection
+	// Listen runs the thread that will receive the connection
 	Listen(onAccept func(conn net.Conn)) error
 
 	// Shutdown shuts down the acceptor

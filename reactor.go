@@ -2,7 +2,7 @@ package znet
 
 import (
 	"github.com/ebar-go/ego/utils/runtime"
-	"github.com/ebar-go/znet/internal/poller"
+	"github.com/ebar-go/znet/poller"
 	"log"
 	"net"
 )
