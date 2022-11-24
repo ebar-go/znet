@@ -10,13 +10,13 @@ import (
 
 // TCPAcceptor represents tcp acceptor
 type TCPAcceptor struct {
-	base    *Acceptor
+	*Acceptor
 	options Options
 }
 
 // Run runs the acceptor
-func (server *TCPAcceptor) Run(bind string) (err error) {
-	addr, err := net.ResolveTCPAddr("tcp", bind)
+func (acceptor *TCPAcceptor) Listen(onAccept func(conn net.Conn)) (err error) {
+	addr, err := net.ResolveTCPAddr("tcp", acceptor.schema.Addr)
 	if err != nil {
 		return errors.WithMessage(err, "resolve tcp addr")
 	}
@@ -27,26 +27,21 @@ func (server *TCPAcceptor) Run(bind string) (err error) {
 	}
 
 	// use multiple cpus to improve performance
-	for i := 0; i < server.options.Core; i++ {
+	for i := 0; i < acceptor.options.Core; i++ {
 		go func() {
 			defer runtime.HandleCrash()
-			server.accept(lis)
+			acceptor.accept(lis, onAccept)
 		}()
 	}
 
 	return
 }
 
-// Shutdown shuts down acceptor
-func (acceptor *TCPAcceptor) Shutdown() {
-	acceptor.base.Done()
-}
-
 // accept connection
-func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
+func (acceptor *TCPAcceptor) accept(lis *net.TCPListener, onAccept func(conn net.Conn)) {
 	for {
 		select {
-		case <-acceptor.base.Signal():
+		case <-acceptor.done:
 			return
 		default:
 			conn, err := lis.AcceptTCP()
@@ -68,16 +63,8 @@ func (acceptor *TCPAcceptor) accept(lis *net.TCPListener) {
 				continue
 			}
 
-			acceptor.base.handler(codec.NewLengthFieldBasedFromDecoder(conn, acceptor.options.LengthOffset))
+			onAccept(codec.NewLengthFieldBasedFromDecoder(conn, acceptor.options.LengthOffset))
 		}
 	}
 
-}
-
-// NewTCPAcceptor returns a new instance of the TCPAcceptor
-func NewTCPAcceptor(options Options, handler func(conn net.Conn)) *TCPAcceptor {
-	return &TCPAcceptor{
-		base:    NewAcceptor(handler),
-		options: options,
-	}
 }

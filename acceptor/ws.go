@@ -10,14 +10,14 @@ import (
 
 // WebsocketAcceptor represents websocket acceptor
 type WebsocketAcceptor struct {
-	base    *Acceptor
+	*Acceptor
 	options Options
 	upgrade ws.Upgrader
 }
 
 // Run runs websocket acceptor
-func (acceptor *WebsocketAcceptor) Run(bind string) (err error) {
-	ln, err := net.Listen("tcp", bind)
+func (acceptor *WebsocketAcceptor) Listen(onAccept func(conn net.Conn)) (err error) {
+	ln, err := net.Listen("tcp", acceptor.schema.Addr)
 	if err != nil {
 		return err
 	}
@@ -26,22 +26,17 @@ func (acceptor *WebsocketAcceptor) Run(bind string) (err error) {
 	for i := 0; i < 1; i++ {
 		go func() {
 			defer runtime.HandleCrash()
-			acceptor.accept(ln)
+			acceptor.accept(ln, onAccept)
 		}()
 	}
 	return nil
 }
 
-// Shutdown shuts down acceptor
-func (acceptor *WebsocketAcceptor) Shutdown() {
-	acceptor.base.Done()
-}
-
 // accept connection
-func (acceptor *WebsocketAcceptor) accept(ln net.Listener) {
+func (acceptor *WebsocketAcceptor) accept(ln net.Listener, onAccept func(conn net.Conn)) {
 	for {
 		select {
-		case <-acceptor.base.Signal():
+		case <-acceptor.done:
 			return
 		default:
 			conn, err := ln.Accept()
@@ -55,23 +50,8 @@ func (acceptor *WebsocketAcceptor) accept(ln net.Listener) {
 				log.Printf("upgrade(\"%s\") error(%v)", conn.RemoteAddr().String(), err)
 				continue
 			}
-			acceptor.base.handler(codec.NewWebsocketDecoder(conn))
+			onAccept(codec.NewWebsocketDecoder(conn))
 		}
 
 	}
-}
-
-// NewWSAcceptor return a new instance of the WebsocketAcceptor
-func NewWSAcceptor(options Options, handler func(conn net.Conn)) *WebsocketAcceptor {
-	return &WebsocketAcceptor{
-		base:    NewAcceptor(handler),
-		options: options,
-		upgrade: ws.Upgrader{
-			OnHeader: func(key, value []byte) (err error) {
-				//log.Printf("non-websocket header: %q=%q", key, value)
-				return
-			},
-		},
-	}
-
 }

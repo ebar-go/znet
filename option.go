@@ -3,8 +3,8 @@ package znet
 import (
 	"errors"
 	"github.com/ebar-go/ego/utils/pool"
+	"github.com/ebar-go/znet/acceptor"
 	"github.com/ebar-go/znet/codec"
-	"github.com/ebar-go/znet/internal/acceptor"
 	"time"
 )
 

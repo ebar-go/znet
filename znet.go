@@ -3,18 +3,18 @@ package znet
 import (
 	"errors"
 	"github.com/ebar-go/ego/utils/runtime"
-	"github.com/ebar-go/znet/internal"
+	"github.com/ebar-go/znet/acceptor"
 	"log"
 )
 
 // Instance implements of Instance interface
 type Instance struct {
-	options  *Options          // options for the event loop
-	schemas  []internal.Schema // schema for acceptors
-	router   *Router           // router for handlers
-	reactor  *Reactor          // reactor model
-	thread   *Thread           //
-	callback *Callback
+	options   *Options // options for the event loop
+	router    *Router  // router for handlers
+	reactor   *Reactor // reactor model
+	thread    *Thread  //
+	callback  *Callback
+	acceptors []acceptor.Instance
 }
 
 // New returns a new instance
@@ -32,12 +32,16 @@ func New(setters ...Option) *Instance {
 
 // ListenTCP listens for tcp connections
 func (instance *Instance) ListenTCP(addr string) {
-	instance.schemas = append(instance.schemas, internal.NewSchema(internal.TCP, addr, instance.options.Acceptor))
+	instance.acceptors = append(instance.acceptors, acceptor.NewAcceptor(
+		acceptor.NewTCPSchema(addr),
+		instance.options.Acceptor))
 }
 
 // ListenWebsocket listens for websocket connections
 func (instance *Instance) ListenWebsocket(addr string) {
-	instance.schemas = append(instance.schemas, internal.NewSchema(internal.WEBSOCKET, addr, instance.options.Acceptor))
+	instance.acceptors = append(instance.acceptors, acceptor.NewAcceptor(
+		acceptor.NewWebSocketSchema(addr),
+		instance.options.Acceptor))
 }
 
 // Router return instance of Router
@@ -50,8 +54,8 @@ func (instance *Instance) Run(stopCh <-chan struct{}) error {
 	if err := instance.options.Validate(); err != nil {
 		return err
 	}
-	if len(instance.schemas) == 0 {
-		return errors.New("there are no listeners available")
+	if len(instance.acceptors) == 0 {
+		return errors.New("there are no acceptor available")
 	}
 
 	instance.thread.Use(instance.options.Middlewares...)
@@ -60,7 +64,7 @@ func (instance *Instance) Run(stopCh <-chan struct{}) error {
 	// start listeners
 	listenerSignal := make(chan struct{})
 	defer close(listenerSignal)
-	if err := instance.startListenSchemas(listenerSignal); err != nil {
+	if err := instance.startAcceptor(listenerSignal); err != nil {
 		return err
 	}
 
@@ -77,20 +81,22 @@ func (instance *Instance) Run(stopCh <-chan struct{}) error {
 }
 
 // =====================private methods =================
-func (instance *Instance) startListenSchemas(signal <-chan struct{}) error {
+func (instance *Instance) startAcceptor(signal <-chan struct{}) error {
 	handler := instance.reactor.initializeConnection(
 		instance.callback.onOpen,
 		instance.callback.onClose,
 	)
 
 	// prepare servers
-	for _, schema := range instance.schemas {
+	for _, item := range instance.acceptors {
 		// listen with context and connection register callback function
-		if err := schema.Listen(signal, handler); err != nil {
+		go runtime.WaitClose(signal, item.Shutdown)
+
+		if err := item.Listen(handler); err != nil {
 			return err
 		}
+		log.Printf("Start listening:%v\n", item.Schema())
 
-		log.Printf("start listener: %v\n", schema)
 	}
 	return nil
 }
