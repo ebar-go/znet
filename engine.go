@@ -1,8 +1,8 @@
 package znet
 
 import (
+	"github.com/ebar-go/ego/utils/pool"
 	"github.com/ebar-go/znet/codec"
-	"github.com/ebar-go/znet/internal"
 	"sync"
 )
 
@@ -11,7 +11,7 @@ type Engine struct {
 	handleChains []HandleFunc // is a list of handlers
 
 	once            sync.Once
-	contextProvider internal.Provider[*Context] // is a pool for Context
+	contextProvider pool.Provider[*Context] // is a pool for Context
 }
 
 func NewEngine() *Engine {
@@ -22,9 +22,9 @@ func (e *Engine) Use(handlers ...HandleFunc) {
 	e.handleChains = append(e.handleChains, handlers...)
 }
 
-func (e *Engine) getProvider() internal.Provider[*Context] {
+func (e *Engine) getProvider() pool.Provider[*Context] {
 	e.once.Do(func() {
-		e.contextProvider = internal.NewSyncPoolProvider[*Context](func() interface{} {
+		e.contextProvider = pool.NewSyncPoolProvider[*Context](func() interface{} {
 			return &Context{engine: e}
 		})
 	})

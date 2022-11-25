@@ -3,7 +3,6 @@ package znet
 import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/ego/utils/structure"
-	"github.com/ebar-go/znet/internal"
 )
 
 type SubReactor interface {
@@ -17,7 +16,7 @@ type SubReactor interface {
 // SingleSubReactor represents sub reactor
 type SingleSubReactor struct {
 	// buffer manage active file descriptors
-	buffer *internal.Buffer[int]
+	buffer *structure.Queue[int]
 
 	// container manage all connections
 	container *structure.ConcurrentMap[int, *Connection]
@@ -54,13 +53,13 @@ func (sub *SingleSubReactor) Polling(stopCh <-chan struct{}, callback func(int))
 // NewSingleSubReactor creates an instance of a SingleSubReactor
 func NewSingleSubReactor(bufferSize int) *SingleSubReactor {
 	return &SingleSubReactor{
-		buffer:    internal.NewBuffer[int](bufferSize),
+		buffer:    structure.NewQueue[int](bufferSize),
 		container: structure.NewConcurrentMap[int, *Connection](),
 	}
 }
 
 type ShardSubReactor struct {
-	container internal.ShardContainer[*SingleSubReactor]
+	container structure.Sharding[*SingleSubReactor]
 }
 
 func (shard *ShardSubReactor) RegisterConnection(conn *Connection) {
@@ -92,7 +91,7 @@ func (shard *ShardSubReactor) Polling(stopCh <-chan struct{}, callback func(int)
 
 func NewShardSubReactor(shardCount, bufferSize int) *ShardSubReactor {
 	return &ShardSubReactor{
-		container: internal.NewShardContainer[*SingleSubReactor](shardCount, func() *SingleSubReactor {
+		container: structure.NewSharding[*SingleSubReactor](shardCount, func() *SingleSubReactor {
 			return NewSingleSubReactor(bufferSize)
 		}),
 	}
