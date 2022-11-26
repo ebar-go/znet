@@ -7,8 +7,8 @@ import (
 	"log"
 )
 
-// Instance implements of Instance interface
-type Instance struct {
+// Network socket server master
+type Network struct {
 	options   *Options // options for the event loop
 	router    *Router  // router for handlers
 	reactor   *Reactor // reactor model
@@ -18,10 +18,10 @@ type Instance struct {
 }
 
 // New returns a new instance
-func New(setters ...Option) *Instance {
+func New(setters ...Option) *Network {
 	options := completeOptions(setters...)
 
-	return &Instance{
+	return &Network{
 		options:  options,
 		reactor:  options.NewReactorOrDie(),
 		router:   options.NewRouter(),
@@ -31,26 +31,26 @@ func New(setters ...Option) *Instance {
 }
 
 // ListenTCP listens for tcp connections
-func (instance *Instance) ListenTCP(addr string) {
+func (instance *Network) ListenTCP(addr string) {
 	instance.acceptors = append(instance.acceptors, acceptor.NewAcceptor(
 		acceptor.NewTCPSchema(addr),
 		instance.options.Acceptor))
 }
 
 // ListenWebsocket listens for websocket connections
-func (instance *Instance) ListenWebsocket(addr string) {
+func (instance *Network) ListenWebsocket(addr string) {
 	instance.acceptors = append(instance.acceptors, acceptor.NewAcceptor(
 		acceptor.NewWebSocketSchema(addr),
 		instance.options.Acceptor))
 }
 
 // Router return instance of Router
-func (instance *Instance) Router() *Router {
+func (instance *Network) Router() *Router {
 	return instance.router
 }
 
 // Run starts the event-loop
-func (instance *Instance) Run(stopCh <-chan struct{}) error {
+func (instance *Network) Run(stopCh <-chan struct{}) error {
 	if err := instance.options.Validate(); err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (instance *Instance) Run(stopCh <-chan struct{}) error {
 }
 
 // =====================private methods =================
-func (instance *Instance) startAcceptor(signal <-chan struct{}) error {
+func (instance *Network) startAcceptor(signal <-chan struct{}) error {
 	handler := instance.reactor.initializeConnection(
 		instance.callback.onOpen,
 		instance.callback.onClose,
@@ -101,6 +101,6 @@ func (instance *Instance) startAcceptor(signal <-chan struct{}) error {
 	return nil
 }
 
-func (instance *Instance) shutdown() {
+func (instance *Network) shutdown() {
 	log.Println("server shutdown complete")
 }

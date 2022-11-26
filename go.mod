@@ -3,9 +3,8 @@ module github.com/ebar-go/znet
 go 1.18
 
 require (
-	github.com/ebar-go/ego v1.1.5
+	github.com/ebar-go/ego v1.1.7
 	github.com/gobwas/ws v1.1.0
-	github.com/pkg/errors v0.9.1
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.8.1
@@ -25,6 +24,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	github.com/ebar-go/ego  => D:\Workspace\go\src\github.com\ebar-go\ego
-)
+//replace github.com/ebar-go/ego => D:\Workspace\go\src\github.com\ebar-go\ego
