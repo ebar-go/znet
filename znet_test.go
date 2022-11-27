@@ -3,6 +3,7 @@ package znet
 import (
 	"context"
 	"github.com/ebar-go/ego/utils/pool"
+	"github.com/ebar-go/znet/client"
 	"github.com/ebar-go/znet/codec"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/assert"
@@ -46,45 +47,54 @@ func TestNew(t *testing.T) {
 }
 
 func TestClient(t *testing.T) {
-	conn, err := net.Dial("tcp", "localhost:8081") // tcp
-	//conn, _, _, err := ws.Dial(context.Background(), "ws://127.0.0.1:8082") // websocket
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	fn := func(conn net.Conn) {
+		go func() {
+			bytes := pool.GetByte(512)
+			defer pool.PutByte(bytes)
+			for {
+				n, err := conn.Read(bytes)
+				if err != nil {
+					log.Println("read error", time.Now().UnixMicro(), err)
+					return
+				}
+				log.Println("receive response: ", string(bytes[:n]))
+			}
+		}()
 
-	decoder := codec.NewLengthFieldBasedFromDecoder(conn, 4)
-	//decoder := codec.NewWebsocketClientDecoder(conn) // websocket
-	go func() {
-		bytes := pool.GetByte(512)
-		defer pool.PutByte(bytes)
+		packet := codec.NewPacket(codec.NewJsonCodec())
+		packet.Action = 1
+		packet.Seq = 1
+
+		_ = packet.Marshal(map[string]any{"foo": "bar"})
+		p, _ := packet.Pack()
+
+		log.Printf("packet length=%d, str=%s\n", len(p), string(p))
+
 		for {
-			n, err := decoder.Read(bytes)
-
+			_, err := conn.Write(p)
 			if err != nil {
-				log.Println("read error", time.Now().UnixMicro(), err)
 				return
 			}
-			log.Println("receive response: ", string(bytes[:n]))
-		}
-	}()
-
-	packet := codec.NewPacket(codec.NewJsonCodec())
-	packet.Action = 1
-	packet.Seq = 1
-
-	_ = packet.Marshal(map[string]interface{}{"foo": "bar"})
-	p, _ := packet.Pack()
-
-	log.Printf("packet length=%d, str=%s\n", len(p), string(p))
-
-	go func() {
-		for {
-			n, err := decoder.Write(p)
-			log.Println(n, err)
 			time.Sleep(time.Second * 3)
 		}
-	}()
-	select {}
+	}
+
+	t.Run("TcpClient", func(t *testing.T) {
+		conn, err := client.DialTCP("localhost:8081") // tcp
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		fn(conn)
+	})
+
+	t.Run("WebSocketClient", func(t *testing.T) {
+		conn, err := client.DialWebSocket(context.Background(), "ws://127.0.0.1:8082") // websocket
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		fn(conn)
+	})
 }
 
 func BenchmarkClient(b *testing.B) {
