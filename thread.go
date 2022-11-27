@@ -33,21 +33,23 @@ func (thread *Thread) Use(handlers ...HandleFunc) {
 // HandleRequest handle new request for connection
 func (thread *Thread) HandleRequest(conn *Connection) {
 	// read message from connection
-	msg, err := thread.read(conn, true)
+	var (
+		n      = 0
+		bytes  = pool.GetByte(thread.options.MaxReadBufferSize)
+		packet = codec.NewPacket(thread.codec)
+	)
+
+	err := runtime.Call(func() (lastErr error) {
+		n, lastErr = conn.Read(bytes)
+		return
+	}, func() error {
+		return packet.Unpack(bytes[:n])
+	})
+
 	if err != nil {
 		log.Printf("[%s] read failed: %v\n", conn.ID(), err)
-		// put back immediately when read failed
-		pool.PutByte(msg)
-		conn.Close()
-		return
-	}
-
-	// decode packet from message
-	packet, err := thread.decode(msg)
-	if err != nil {
-		log.Printf("[%s] decode failed: %v\n", conn.ID(), err)
 		// put back immediately when decode failed
-		pool.PutByte(msg)
+		pool.PutByte(bytes)
 		conn.Close()
 		return
 	}
@@ -55,30 +57,8 @@ func (thread *Thread) HandleRequest(conn *Connection) {
 	// compute
 	thread.worker.Schedule(func() {
 		defer runtime.HandleCrash()
-		defer pool.PutByte(msg)
+		defer pool.PutByte(bytes)
 
 		thread.engine.compute(conn, packet)
 	})
-}
-
-// ------------------------private methods------------------------
-func (thread *Thread) read(conn *Connection, allocFromPool bool) (p []byte, err error) {
-	var bytes []byte
-	if allocFromPool {
-		bytes = pool.GetByte(thread.options.MaxReadBufferSize)
-	} else {
-		bytes = make([]byte, thread.options.MaxReadBufferSize)
-	}
-
-	n, err := conn.Read(bytes)
-	if err == nil {
-		p = bytes[:n]
-	}
-	return
-}
-
-func (thread *Thread) decode(p []byte) (packet *codec.Packet, err error) {
-	packet = codec.NewPacket(thread.codec)
-	err = packet.Unpack(p)
-	return
 }
