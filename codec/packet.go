@@ -59,3 +59,15 @@ func (p *Packet) Encode(data any) (msg []byte, err error) {
 
 	return p.Pack()
 }
+
+func (p *Packet) EncodeWith(action, seq int16, data any) ([]byte, error) {
+	p.Action = action
+	p.Seq = seq
+
+	err := p.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return p.Pack()
+
+}

@@ -29,6 +29,10 @@ func (ctx *Context) Packet() *codec.Packet {
 	return ctx.packet
 }
 
+func (ctx *Context) Bind(container any) error {
+	return ctx.packet.Unmarshal(container)
+}
+
 // Conn return instance of Connection
 func (ctx *Context) Conn() *Connection {
 	return ctx.conn

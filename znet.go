@@ -95,7 +95,7 @@ func (instance *Network) startAcceptor(signal <-chan struct{}) error {
 		if err := item.Listen(handler); err != nil {
 			return err
 		}
-		log.Printf("Start listening:%v\n", item.Schema())
+		log.Printf("Start listener: %v\n", item.Schema())
 
 	}
 	return nil
