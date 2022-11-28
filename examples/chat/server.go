@@ -34,6 +34,9 @@ const (
 	ActionSubscribeChannel    = 3
 	ActionSendChannelMessage  = 4
 	ActionQueryHistoryMessage = 5
+
+	ActionNewUserMessageNotify    = 101
+	ActionNewChannelMessageNotify = 102
 )
 
 type Handler struct {
@@ -85,7 +88,7 @@ func (handler *Handler) sendUserMessage(ctx *znet.Context, req *SendUserMessageR
 		},
 		CreatedAt: time.Now().UnixMilli(),
 	}
-	p, err := packet.EncodeWith(ActionSendUserMessage, 1, message)
+	p, err := packet.EncodeWith(ActionNewUserMessageNotify, 1, message)
 
 	if err != nil {
 		return nil, errors.WithMessage(err, "encode packet")
@@ -132,16 +135,19 @@ func (handler *Handler) sendChannelMessage(ctx *znet.Context, req *SendChannelMe
 
 	packet := codec.NewPacket(handler.codec)
 
-	message := Message{
-		ID:      "msg" + uuid.NewV4().String(),
-		Content: req.Content,
-		Sender: User{
-			ID:   ctx.Conn().GetStringFromProperty("uid"),
-			Name: ctx.Conn().GetStringFromProperty("name"),
+	message := ChannelMessage{
+		Message: Message{
+			ID:      "msg" + uuid.NewV4().String(),
+			Content: req.Content,
+			Sender: User{
+				ID:   ctx.Conn().GetStringFromProperty("uid"),
+				Name: ctx.Conn().GetStringFromProperty("name"),
+			},
+			CreatedAt: time.Now().UnixMilli(),
 		},
-		CreatedAt: time.Now().UnixMilli(),
+		Channel: channel.Name,
 	}
-	p, err := packet.EncodeWith(ActionSendChannelMessage, 1, message)
+	p, err := packet.EncodeWith(ActionNewChannelMessageNotify, 1, message)
 
 	if err != nil {
 		return nil, errors.WithMessage(err, "encode packet")

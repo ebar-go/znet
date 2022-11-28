@@ -36,11 +36,13 @@ type User struct {
 	Name string `json:"name"`
 }
 type Message struct {
-	ID      string `json:"id"`
-	Content string `json:"content"`
-	Sender  struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	} `json:"sender"`
-	CreatedAt int64 `json:"createdAt"`
+	ID        string `json:"id"`
+	Content   string `json:"content"`
+	Sender    User   `json:"sender"`
+	CreatedAt int64  `json:"createdAt"`
+}
+
+type ChannelMessage struct {
+	Message
+	Channel string `json:"channel"`
 }
