@@ -125,6 +125,39 @@ func (handler *Handler) subscribeChannel(ctx *znet.Context, req *SubscribeChanne
 }
 
 func (handler *Handler) sendChannelMessage(ctx *znet.Context, req *SendChannelMessageRequest) (resp *SendChannelMessageResponse, err error) {
+	channel, err := handler.channels.Find(req.Channel)
+	if err != nil {
+		return nil, errors.WithMessage(err, "get channel")
+	}
+
+	packet := codec.NewPacket(handler.codec)
+
+	message := Message{
+		ID:      "msg" + uuid.NewV4().String(),
+		Content: req.Content,
+		Sender: User{
+			ID:   ctx.Conn().GetStringFromProperty("uid"),
+			Name: ctx.Conn().GetStringFromProperty("name"),
+		},
+		CreatedAt: time.Now().UnixMilli(),
+	}
+	p, err := packet.EncodeWith(ActionSendChannelMessage, 1, message)
+
+	if err != nil {
+		return nil, errors.WithMessage(err, "encode packet")
+	}
+
+	for _, member := range channel.Members {
+		receiver, err := handler.users.Find(member)
+		if err != nil {
+			continue
+		}
+		if _, err = receiver.Write(p); err != nil {
+			continue
+		}
+	}
+
+	resp = &SendChannelMessageResponse{ID: message.ID}
 	return
 }
 

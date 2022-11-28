@@ -5,9 +5,10 @@ import (
 	"github.com/ebar-go/znet/codec"
 	"log"
 	"testing"
+	"time"
 )
 
-func newClient(name string) (*client.Client, error) {
+func login(name string) (*client.Client, error) {
 	conn, err := client.DialTCP("localhost:8081") // tcp
 	if err != nil {
 		return nil, err
@@ -40,14 +41,21 @@ func newClient(name string) (*client.Client, error) {
 	return conn, nil
 
 }
-func TestClient(t *testing.T) {
+func TestLogin(t *testing.T) {
+	_, err := login("clientA")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	select {}
+}
+func TestSendUserMessage(t *testing.T) {
 
 	t.Run("clientA", func(t *testing.T) {
-		newClient("clientA")
+		login("clientA")
 		select {}
 	})
 	t.Run("clientB", func(t *testing.T) {
-		conn, err := newClient("clientB")
+		conn, err := login("clientB")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -61,4 +69,65 @@ func TestClient(t *testing.T) {
 		select {}
 	})
 
+}
+
+func joinChannel(conn *client.Client, channelName string) error {
+	packet := codec.NewPacket(codec.NewJsonCodec())
+	p, _ := packet.EncodeWith(ActionSubscribeChannel, 1, &SubscribeChannelRequest{
+		Name: channelName,
+	})
+	_, err := conn.Write(p)
+	return err
+}
+
+func TestSendChannelMessage(t *testing.T) {
+	channelName := "test-channel"
+	t.Run("clientA", func(t *testing.T) {
+		conn, err := login("clientA")
+		if err != nil {
+			t.Fatalf("login unexpected error: %v", err)
+		}
+
+		time.Sleep(time.Second)
+
+		if err := joinChannel(conn, channelName); err != nil {
+			t.Fatalf("joinChannel unexpected error: %v", err)
+		}
+
+		select {}
+	})
+	t.Run("clientB", func(t *testing.T) {
+		conn, err := login("clientB")
+		if err != nil {
+			t.Fatalf("login unexpected error: %v", err)
+		}
+
+		time.Sleep(time.Second)
+		if err := joinChannel(conn, channelName); err != nil {
+			t.Fatalf("joinChannel unexpected error: %v", err)
+		}
+
+		select {}
+	})
+	t.Run("clientC", func(t *testing.T) {
+		conn, err := login("clientC")
+		if err != nil {
+			t.Fatalf("login unexpected error: %v", err)
+		}
+
+		time.Sleep(time.Second)
+		if err := joinChannel(conn, channelName); err != nil {
+			t.Fatalf("joinChannel unexpected error: %v", err)
+		}
+
+		time.Sleep(time.Second)
+
+		packet := codec.NewPacket(codec.NewJsonCodec())
+		p, _ := packet.EncodeWith(ActionSendChannelMessage, 1, &SendChannelMessageRequest{
+			Channel: channelName,
+			Content: "Hello:" + channelName,
+		})
+		conn.Write(p)
+		select {}
+	})
 }

@@ -20,8 +20,13 @@ type SubscribeChannelRequest struct {
 }
 type SubscribeChannelResponse struct{}
 
-type SendChannelMessageRequest struct{}
-type SendChannelMessageResponse struct{}
+type SendChannelMessageRequest struct {
+	Channel string `json:"channel"`
+	Content string `json:"content"`
+}
+type SendChannelMessageResponse struct {
+	ID string `json:"id"`
+}
 
 type QueryHistoryMessageRequest struct{}
 type QueryHistoryMessageResponse struct{}
