@@ -37,14 +37,16 @@ const (
 )
 
 type Handler struct {
-	codec codec.Codec
-	users *structure.ConcurrentMap[string, *znet.Connection]
+	codec    codec.Codec
+	users    *structure.ConcurrentMap[string, *znet.Connection]
+	channels *structure.ConcurrentMap[string, *Channel]
 }
 
 func New() *Handler {
 	return &Handler{
-		codec: codec.NewJsonCodec(),
-		users: structure.NewConcurrentMap[string, *znet.Connection](),
+		codec:    codec.NewJsonCodec(),
+		users:    structure.NewConcurrentMap[string, *znet.Connection](),
+		channels: structure.NewConcurrentMap[string, *Channel](),
 	}
 }
 
@@ -75,8 +77,12 @@ func (handler *Handler) sendUserMessage(ctx *znet.Context, req *SendUserMessageR
 	packet := codec.NewPacket(handler.codec)
 
 	message := Message{
-		ID:        "msg" + uuid.NewV4().String(),
-		Content:   req.Content,
+		ID:      "msg" + uuid.NewV4().String(),
+		Content: req.Content,
+		Sender: User{
+			ID:   ctx.Conn().GetStringFromProperty("uid"),
+			Name: ctx.Conn().GetStringFromProperty("name"),
+		},
 		CreatedAt: time.Now().UnixMilli(),
 	}
 	p, err := packet.EncodeWith(ActionSendUserMessage, 1, message)
@@ -92,7 +98,29 @@ func (handler *Handler) sendUserMessage(ctx *znet.Context, req *SendUserMessageR
 	return
 }
 
+type Channel struct {
+	Name    string `json:"name"`
+	Members []string
+}
+
 func (handler *Handler) subscribeChannel(ctx *znet.Context, req *SubscribeChannelRequest) (resp *SubscribeChannelResponse, err error) {
+	channel, exist := handler.channels.Get(req.Name)
+	if !exist {
+		channel = &Channel{Name: req.Name, Members: make([]string, 0, 100)}
+		channel.Members = append(channel.Members, ctx.Conn().ID())
+		handler.channels.Set(req.Name, channel)
+		return
+	}
+
+	uid := ctx.Conn().GetStringFromProperty("uid")
+	for _, member := range channel.Members {
+		if member == uid {
+			return
+		}
+	}
+
+	channel.Members = append(channel.Members, uid)
+
 	return
 }
 
