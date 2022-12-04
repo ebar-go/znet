@@ -47,7 +47,7 @@ type ThreadOptions struct {
 	WorkerPool *pool.Options
 }
 
-func (options ThreadOptions) NewWorkerPool() pool.WorkerPool {
+func (options ThreadOptions) NewWorkerPool() pool.GoroutinePool {
 	return pool.NewGoroutinePool(func(opts *pool.Options) {
 		opts.Max = options.WorkerPool.Max
 		opts.Idle = options.WorkerPool.Idle
