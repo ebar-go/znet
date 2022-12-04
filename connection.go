@@ -31,14 +31,6 @@ func (conn *Connection) Property() *structure.ConcurrentMap[string, any] {
 	return conn.property
 }
 
-func (conn *Connection) GetStringFromProperty(prop string) string {
-	item, ok := conn.property.Get(prop)
-	if !ok {
-		return ""
-	}
-	return item.(string)
-}
-
 func (conn *Connection) IP() string {
 	return conn.instance.RemoteAddr().String()
 }

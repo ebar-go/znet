@@ -11,7 +11,7 @@ import (
 type Thread struct {
 	options ThreadOptions
 	codec   codec.Codec
-	worker  pool.WorkerPool
+	worker  pool.GoroutinePool
 	engine  *Engine
 }
 

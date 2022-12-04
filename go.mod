@@ -3,7 +3,7 @@ module github.com/ebar-go/znet
 go 1.18
 
 require (
-	github.com/ebar-go/ego v1.1.7
+	github.com/ebar-go/ego v1.1.8
 	github.com/gobwas/ws v1.1.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/satori/go.uuid v1.2.0

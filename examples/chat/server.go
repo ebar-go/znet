@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/ebar-go/ego/errors"
+	"github.com/ebar-go/ego/utils/convert"
 	"github.com/ebar-go/ego/utils/runtime/signal"
 	"github.com/ebar-go/ego/utils/structure"
 	"github.com/ebar-go/znet"
@@ -83,8 +84,8 @@ func (handler *Handler) sendUserMessage(ctx *znet.Context, req *SendUserMessageR
 		ID:      "msg" + uuid.NewV4().String(),
 		Content: req.Content,
 		Sender: User{
-			ID:   ctx.Conn().GetStringFromProperty("uid"),
-			Name: ctx.Conn().GetStringFromProperty("name"),
+			ID:   GetStringFromConnection(ctx.Conn(), "uid"),
+			Name: GetStringFromConnection(ctx.Conn(), "name"),
 		},
 		CreatedAt: time.Now().UnixMilli(),
 	}
@@ -115,7 +116,7 @@ func (handler *Handler) subscribeChannel(ctx *znet.Context, req *SubscribeChanne
 		return
 	}
 
-	uid := ctx.Conn().GetStringFromProperty("uid")
+	uid := GetStringFromConnection(ctx.Conn(), "uid")
 	for _, member := range channel.Members {
 		if member == uid {
 			return
@@ -140,8 +141,8 @@ func (handler *Handler) sendChannelMessage(ctx *znet.Context, req *SendChannelMe
 			ID:      "msg" + uuid.NewV4().String(),
 			Content: req.Content,
 			Sender: User{
-				ID:   ctx.Conn().GetStringFromProperty("uid"),
-				Name: ctx.Conn().GetStringFromProperty("name"),
+				ID:   GetStringFromConnection(ctx.Conn(), "uid"),
+				Name: GetStringFromConnection(ctx.Conn(), "name"),
 			},
 			CreatedAt: time.Now().UnixMilli(),
 		},
@@ -169,4 +170,12 @@ func (handler *Handler) sendChannelMessage(ctx *znet.Context, req *SendChannelMe
 
 func (handler *Handler) queryHistoryMessage(ctx *znet.Context, req *QueryHistoryMessageRequest) (resp *QueryHistoryMessageResponse, err error) {
 	return
+}
+
+func GetStringFromConnection(conn *znet.Connection, key string) string {
+	val, ok := conn.Property().Get(key)
+	if !ok {
+		return ""
+	}
+	return convert.ToString(val)
 }

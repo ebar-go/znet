@@ -1,6 +1,6 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
-github.com/ebar-go/ego v1.1.7 h1:s8BQtWvp/WCMujx+GROHIMQ05CKs3GlUDgjsHLZQU/I=
-github.com/ebar-go/ego v1.1.7/go.mod h1:dP06QM0dLkwGmpVPApqI5zNz3uecO3aKD6pvw/29Eqw=
+github.com/ebar-go/ego v1.1.8 h1:+Zqb64QokWpSLnkc37UBQJYYYES2L7nRXsZLYZj10Co=
+github.com/ebar-go/ego v1.1.8/go.mod h1:dP06QM0dLkwGmpVPApqI5zNz3uecO3aKD6pvw/29Eqw=
 github.com/gobwas/httphead v0.1.0 h1:exrUm0f4YX0L7EBwZHuCF4GDp8aJfVeBrlLQrs6NqWU=
 github.com/gobwas/httphead v0.1.0/go.mod h1:O/RXo79gxV8G+RqlR/otEwx4Q36zl9rqC5u12GKvMCM=
 github.com/gobwas/pool v0.2.1 h1:xfeeEhW7pwmX8nuLVlqbzVc7udMDrwetjEv+TZIz1og=
