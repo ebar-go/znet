@@ -2,6 +2,7 @@ package znet
 
 import (
 	"errors"
+	"github.com/ebar-go/ego/component"
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/acceptor"
 	"log"
@@ -61,6 +62,7 @@ func (instance *Network) Run(stopCh <-chan struct{}) error {
 	instance.thread.Use(instance.options.Middlewares...)
 	instance.thread.Use(instance.router.handleRequest(instance.callback.onError))
 
+	component.Event().Trigger(BeforeServerStart, nil)
 	// start listeners
 	listenerSignal := make(chan struct{})
 	defer close(listenerSignal)
@@ -76,7 +78,13 @@ func (instance *Network) Run(stopCh <-chan struct{}) error {
 		instance.reactor.Run(reactorSignal, instance.thread.HandleRequest)
 	}()
 
-	runtime.WaitClose(stopCh, instance.shutdown)
+	component.Event().Trigger(AfterServerStart, nil)
+
+	runtime.WaitClose(stopCh, func() {
+		component.Event().Trigger(BeforeServerShutdown, nil)
+	}, instance.shutdown)
+
+	defer component.Event().Trigger(AfterServerShutdown, nil)
 	return nil
 }
 
@@ -89,13 +97,13 @@ func (instance *Network) startAcceptor(signal <-chan struct{}) error {
 
 	// prepare servers
 	for _, item := range instance.acceptors {
-		// listen with context and connection register callback function
-		go runtime.WaitClose(signal, item.Shutdown)
-
 		if err := item.Listen(handler); err != nil {
 			return err
 		}
 		log.Printf("Start listener: %v\n", item.Schema())
+
+		// listen with context and connection register callback function
+		go runtime.WaitClose(signal, item.Shutdown)
 
 	}
 	return nil
