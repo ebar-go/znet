@@ -16,9 +16,12 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	//go func() {
-	//	runtime.ShowMemoryUsage()
-	//}()
+	RegisterEvent(AfterServerStart, func() {
+		log.Printf("Starting")
+	})
+	RegisterEvent(BeforeServerShutdown, func() {
+		log.Printf("Shutdown")
+	})
 	instance := New(func(options *Options) {
 		options.OnOpen = func(conn *Connection) {
 			log.Printf("[%s] connected", conn.ID())

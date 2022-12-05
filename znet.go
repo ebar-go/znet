@@ -84,7 +84,6 @@ func (instance *Network) Run(stopCh <-chan struct{}) error {
 		component.Event().Trigger(BeforeServerShutdown, nil)
 	}, instance.shutdown)
 
-	defer component.Event().Trigger(AfterServerShutdown, nil)
 	return nil
 }
 
@@ -110,5 +109,5 @@ func (instance *Network) startAcceptor(signal <-chan struct{}) error {
 }
 
 func (instance *Network) shutdown() {
-	log.Println("server shutdown complete")
+	component.Event().Trigger(AfterServerShutdown, nil)
 }
