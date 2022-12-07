@@ -1,13 +1,16 @@
 package codec
 
 import (
+	"context"
 	"errors"
 	"github.com/ebar-go/ego/utils/binary"
 	"github.com/ebar-go/ego/utils/pool"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/lucas-clemente/quic-go"
 	"io"
 	"net"
 	"syscall"
+	"time"
 )
 
 type LengthFieldBasedFrameDecoder struct {
@@ -64,7 +67,7 @@ func NewWebsocketDecoder(conn net.Conn) net.Conn {
 	return &websocketDecoder{Conn: conn}
 }
 
-func NewWebsocketClientDecoder(conn net.Conn) *websocketDecoder {
+func NewWebsocketClientDecoder(conn net.Conn) net.Conn {
 	return &websocketDecoder{Conn: conn, isClient: true}
 }
 
@@ -100,4 +103,58 @@ func (c *websocketDecoder) Write(p []byte) (n int, err error) {
 	}
 	n = len(p)
 	return
+}
+
+type quicDecoder struct {
+	conn quic.Connection
+}
+
+func (decoder *quicDecoder) Read(b []byte) (n int, err error) {
+	stream, err := decoder.conn.AcceptStream(context.Background())
+	if err != nil {
+		return
+	}
+
+	return stream.Read(b)
+}
+
+func (decoder *quicDecoder) Write(b []byte) (n int, err error) {
+	stream, err := decoder.conn.AcceptStream(context.Background())
+	if err != nil {
+		return
+	}
+	return stream.Write(b)
+}
+
+func (decoder *quicDecoder) Close() error {
+	return decoder.conn.CloseWithError(0, "")
+}
+
+func (decoder *quicDecoder) LocalAddr() net.Addr {
+	return decoder.conn.LocalAddr()
+}
+
+func (decoder *quicDecoder) RemoteAddr() net.Addr {
+	return decoder.conn.RemoteAddr()
+}
+
+func (decoder *quicDecoder) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (decoder *quicDecoder) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (decoder *quicDecoder) SetWriteDeadline(t time.Time) error {
+	return nil
+}
+
+// SyscallConn prepare for epoll
+func (decoder *quicDecoder) SyscallConn() (syscall.RawConn, error) {
+	return nil, nil
+}
+
+func NewQUICDecoder(conn quic.Connection) net.Conn {
+	return &quicDecoder{conn: conn}
 }

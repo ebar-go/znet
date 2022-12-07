@@ -39,6 +39,7 @@ func TestNew(t *testing.T) {
 
 	instance.ListenTCP(":8081")
 	instance.ListenWebsocket(":8082")
+	instance.ListenQUIC(":8083")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
 		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body))
@@ -93,6 +94,14 @@ func TestClient(t *testing.T) {
 
 	t.Run("WebSocketClient", func(t *testing.T) {
 		conn, err := client.DialWebSocket(context.Background(), "ws://127.0.0.1:8082") // websocket
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		fn(conn)
+	})
+
+	t.Run("QUICClient", func(t *testing.T) {
+		conn, err := client.DialQUIC("127.0.0.1:8083")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

@@ -55,6 +55,11 @@ func NewAcceptor(schema Schema, options Options) Instance {
 				},
 			},
 		}
+	} else if schema.Protocol == QUIC {
+		return &QUICAcceptor{
+			Acceptor: acceptor,
+			options:  options,
+		}
 	}
 
 	return nil

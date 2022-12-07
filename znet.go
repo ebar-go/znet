@@ -45,6 +45,13 @@ func (instance *Network) ListenWebsocket(addr string) {
 		instance.options.Acceptor))
 }
 
+// ListenQUIC listens for quic connections
+func (instance *Network) ListenQUIC(addr string) {
+	instance.acceptors = append(instance.acceptors, acceptor.NewAcceptor(
+		acceptor.NewQUICSchema(addr),
+		instance.options.Acceptor))
+}
+
 // Router return instance of Router
 func (instance *Network) Router() *Router {
 	return instance.router

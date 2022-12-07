@@ -7,6 +7,7 @@ import (
 const (
 	TCP       = "tcp"
 	WEBSOCKET = "ws"
+	QUIC      = "quic"
 )
 
 // Schema represents a protocol specification
@@ -32,4 +33,8 @@ func NewTCPSchema(addr string) Schema {
 }
 func NewWebSocketSchema(addr string) Schema {
 	return NewSchema(WEBSOCKET, addr)
+}
+
+func NewQUICSchema(addr string) Schema {
+	return NewSchema(QUIC, addr)
 }
