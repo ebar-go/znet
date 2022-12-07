@@ -39,7 +39,7 @@ func TestNew(t *testing.T) {
 
 	instance.ListenTCP(":8081")
 	instance.ListenWebsocket(":8082")
-	instance.ListenQUIC(":8083")
+	//instance.ListenQUIC(":8083")
 
 	instance.Router().Route(1, func(ctx *Context) (any, error) {
 		log.Printf("[%s] message: %s", ctx.Conn().ID(), string(ctx.Packet().Body))

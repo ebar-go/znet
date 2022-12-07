@@ -4,8 +4,6 @@
 package poller
 
 import (
-	"net"
-	"reflect"
 	"sync"
 	"syscall"
 )
@@ -103,12 +101,4 @@ retry:
 	}
 	e.mu.RUnlock()
 	return connections, nil
-}
-
-// SocketFD get socket connection fd
-func (e *epoll) SocketFD(conn net.Conn) int {
-	tcpConn := reflect.Indirect(reflect.ValueOf(conn)).FieldByName("conn")
-	fdVal := tcpConn.FieldByName("fd")
-	pfdVal := reflect.Indirect(fdVal).FieldByName("pfd")
-	return int(pfdVal.FieldByName("Sysfd").Int())
 }

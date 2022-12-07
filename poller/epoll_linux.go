@@ -4,8 +4,6 @@ package poller
 
 import (
 	"golang.org/x/sys/unix"
-	"net"
-	"reflect"
 	"sync"
 	"syscall"
 )
@@ -99,12 +97,4 @@ func NewPollerWithBuffer(size int) (Poller, error) {
 		events:       make([]unix.EpollEvent, size, size),
 		connBuffers:  make([]int, size, size),
 	}, nil
-}
-
-// SocketFD get socket connection fd
-func (e *Epoll) SocketFD(conn net.Conn) int {
-	tcpConn := reflect.Indirect(reflect.ValueOf(conn)).FieldByName("conn")
-	fdVal := tcpConn.FieldByName("fd")
-	pfdVal := reflect.Indirect(fdVal).FieldByName("pfd")
-	return int(pfdVal.FieldByName("Sysfd").Int())
 }

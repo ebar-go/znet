@@ -85,7 +85,7 @@ func (reactor *Reactor) wrapHandler(handler ConnectionHandler) func(active int) 
 func (reactor *Reactor) initializeConnection(onOpen, onClose ConnectionHandler) func(conn net.Conn) {
 	return func(conn net.Conn) {
 		// create instance of Connection
-		connection := NewConnection(conn, reactor.poll.SocketFD(conn))
+		connection := NewConnection(conn, poller.SocketFD(conn))
 		if err := reactor.poll.Add(connection.fd); err != nil {
 			connection.Close()
 			log.Println("poll.Add failed: ", connection.fd, err)

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"net"
 	"sync"
-	"syscall"
 )
 
 type Epoll struct {
@@ -46,11 +45,6 @@ func (e *Epoll) Close() error {
 
 		return errors.New(" an error occurred on epoll.close ")
 	}
-}
-
-func (e *Epoll) SocketFD(conn net.Conn) int {
-	fd := C.SOCKET(socketFDAsUint(conn))
-	return int(fd)
 }
 
 func (e *Epoll) Add(fd int) error {
@@ -92,19 +86,4 @@ func (e *Epoll) Wait() ([]int, error) {
 	e.lock.RUnlock()
 
 	return connections, nil
-}
-
-func socketFDAsUint(conn net.Conn) uint64 {
-	if con, ok := conn.(syscall.Conn); ok {
-		raw, err := con.SyscallConn()
-		if err != nil {
-			return 0
-		}
-		sfd := uint64(0)
-		raw.Control(func(fd uintptr) {
-			sfd = uint64(fd)
-		})
-		return sfd
-	}
-	return 0
 }
