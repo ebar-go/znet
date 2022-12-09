@@ -4,6 +4,7 @@ import (
 	"github.com/ebar-go/ego/utils/runtime"
 	"github.com/ebar-go/znet/poller"
 	"log"
+	"math/rand"
 	"net"
 )
 
@@ -109,4 +110,39 @@ func (reactor *Reactor) initializeConnection(onOpen, onClose ConnectionHandler) 
 		)
 	}
 
+}
+
+func (reactor *Reactor) initializeUnSupportedReactorConnection(onOpen, onClose, onReceive ConnectionHandler) func(conn net.Conn) {
+	return func(conn net.Conn) {
+		// create instance of Connection
+		connection := NewConnection(conn, rand.Intn(100000))
+
+		onOpen(connection)
+
+		reactor.sub.RegisterConnection(connection)
+
+		done := make(chan struct{})
+		// those callback functions will be invoked before connection.Close()
+		connection.AddBeforeCloseHook(
+			// trigger disconnect callback
+			onClose,
+			// unregister connection from sub reactor
+			reactor.sub.UnregisterConnection,
+			func(conn *Connection) {
+				close(done)
+			},
+		)
+
+		go func(cc *Connection) {
+			for {
+				bytes := make([]byte, 512)
+				n, err := cc.Read(bytes)
+				if err != nil {
+					return
+				}
+				log.Println("receive:", cc.IP(), bytes[:n])
+				cc.Write(bytes[:n])
+			}
+		}(connection)
+	}
 }

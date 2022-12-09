@@ -100,12 +100,24 @@ func (instance *Network) startAcceptor(signal <-chan struct{}) error {
 		instance.callback.onOpen,
 		instance.callback.onClose,
 	)
+	unsupportedHandler := instance.reactor.initializeUnSupportedReactorConnection(
+		instance.callback.onOpen,
+		instance.callback.onClose,
+		instance.thread.HandleRequest,
+	)
 
 	// prepare servers
 	for _, item := range instance.acceptors {
-		if err := item.Listen(handler); err != nil {
-			return err
+		if item.ReactorSupported() {
+			if err := item.Listen(handler); err != nil {
+				return err
+			}
+		} else {
+			if err := item.Listen(unsupportedHandler); err != nil {
+				return err
+			}
 		}
+
 		log.Printf("Start listener: %v\n", item.Schema())
 
 		// listen with context and connection register callback function

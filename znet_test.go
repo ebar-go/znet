@@ -107,6 +107,13 @@ func TestClient(t *testing.T) {
 		}
 		fn(conn)
 	})
+	t.Run("QUICClient2", func(t *testing.T) {
+		conn, err := client.DialQUIC("127.0.0.1:8083")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		fn(conn)
+	})
 }
 
 func BenchmarkClient(b *testing.B) {

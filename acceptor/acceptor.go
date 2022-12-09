@@ -14,6 +14,8 @@ type Instance interface {
 
 	// Shutdown shuts down the acceptor
 	Shutdown()
+
+	ReactorSupported() bool
 }
 
 type Acceptor struct {
@@ -30,6 +32,9 @@ func (acceptor *Acceptor) Shutdown() {
 	acceptor.once.Do(func() {
 		close(acceptor.done)
 	})
+}
+func (acceptor *Acceptor) ReactorSupported() bool {
+	return true
 }
 
 func NewAcceptor(schema Schema, options Options) Instance {

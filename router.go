@@ -2,6 +2,7 @@ package znet
 
 import (
 	"github.com/ebar-go/ego/utils/structure"
+	"log"
 )
 
 // Handler is a handler for operation
@@ -68,7 +69,8 @@ func (router *Router) handleRequest(onError func(ctx *Context, err error)) Handl
 			return
 		}
 
-		ctx.Conn().Write(msg)
+		n, err := ctx.Conn().Write(msg)
+		log.Println(n, err)
 
 	}
 

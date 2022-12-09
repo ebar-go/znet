@@ -111,7 +111,12 @@ type quicDecoder struct {
 }
 
 func (decoder *quicDecoder) Read(b []byte) (n int, err error) {
-	stream, err := decoder.conn.AcceptStream(context.Background())
+	var stream quic.Stream
+	if decoder.isClient {
+		stream, err = decoder.conn.OpenStreamSync(context.Background())
+	} else {
+		stream, err = decoder.conn.AcceptStream(context.Background())
+	}
 	if err != nil {
 		return
 	}

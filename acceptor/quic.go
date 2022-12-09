@@ -20,6 +20,10 @@ type QUICAcceptor struct {
 	options Options
 }
 
+func (acceptor *QUICAcceptor) ReactorSupported() bool {
+	return false
+}
+
 // Run runs the acceptor
 func (acceptor *QUICAcceptor) Listen(onAccept func(conn net.Conn)) (err error) {
 
@@ -53,19 +57,20 @@ func (acceptor *QUICAcceptor) accept(lis quic.Listener, onAccept func(conn net.C
 				continue
 			}
 
-			go func(conn quic.Connection) {
-				cc := codec.NewQUICDecoder(conn)
-				for {
-					bytes := make([]byte, 512)
-					n, err := cc.Read(bytes)
-					if err != nil {
-						return
-					}
-					log.Println("receive:%s", bytes[:n])
-				}
-			}(conn)
+			//go func(conn quic.Connection) {
+			//	cc := codec.NewQUICDecoder(conn)
+			//	for {
+			//		bytes := make([]byte, 512)
+			//		n, err := cc.Read(bytes)
+			//		if err != nil {
+			//			return
+			//		}
+			//		log.Println("receive:", cc.RemoteAddr(), bytes[:n])
+			//		cc.Write(bytes[:n])
+			//	}
+			//}(conn)
 
-			//onAccept(codec.NewQUICDecoder(conn))
+			onAccept(codec.NewQUICDecoder(conn))
 		}
 	}
 
