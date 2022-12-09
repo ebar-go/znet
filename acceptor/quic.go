@@ -53,7 +53,19 @@ func (acceptor *QUICAcceptor) accept(lis quic.Listener, onAccept func(conn net.C
 				continue
 			}
 
-			onAccept(codec.NewQUICDecoder(conn))
+			go func(conn quic.Connection) {
+				cc := codec.NewQUICDecoder(conn)
+				for {
+					bytes := make([]byte, 512)
+					n, err := cc.Read(bytes)
+					if err != nil {
+						return
+					}
+					log.Println("receive:%s", bytes[:n])
+				}
+			}(conn)
+
+			//onAccept(codec.NewQUICDecoder(conn))
 		}
 	}
 

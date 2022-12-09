@@ -106,7 +106,8 @@ func (c *websocketDecoder) Write(p []byte) (n int, err error) {
 }
 
 type quicDecoder struct {
-	conn quic.Connection
+	conn     quic.Connection
+	isClient bool
 }
 
 func (decoder *quicDecoder) Read(b []byte) (n int, err error) {
@@ -119,7 +120,13 @@ func (decoder *quicDecoder) Read(b []byte) (n int, err error) {
 }
 
 func (decoder *quicDecoder) Write(b []byte) (n int, err error) {
-	stream, err := decoder.conn.AcceptStream(context.Background())
+	var stream quic.Stream
+	if decoder.isClient {
+		stream, err = decoder.conn.OpenStreamSync(context.Background())
+	} else {
+		stream, err = decoder.conn.AcceptStream(context.Background())
+	}
+
 	if err != nil {
 		return
 	}
@@ -157,4 +164,8 @@ func (decoder *quicDecoder) SyscallConn() (syscall.RawConn, error) {
 
 func NewQUICDecoder(conn quic.Connection) net.Conn {
 	return &quicDecoder{conn: conn}
+}
+
+func NewQUICClientDecoder(conn quic.Connection) net.Conn {
+	return &quicDecoder{conn: conn, isClient: true}
 }

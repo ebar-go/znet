@@ -41,5 +41,5 @@ func DialQUIC(addr string) (*Client, error) {
 		return nil, err
 	}
 
-	return &Client{Conn: codec.NewQUICDecoder(conn)}, nil
+	return &Client{Conn: codec.NewQUICClientDecoder(conn)}, nil
 }
