@@ -170,3 +170,10 @@ func defaultThreadOptions() ThreadOptions {
 		},
 	}
 }
+
+// WithDebug enables debugging
+func WithDebug() Option {
+	return func(options *Options) {
+		options.Debug = true
+	}
+}
