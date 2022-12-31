@@ -13,6 +13,8 @@ const (
 	ContentTypeProto = "protobuf"
 )
 
+type ErrorHandler func(ctx *Context, err error)
+
 // Options represents app options
 type Options struct {
 	// Debug enables debug logging
@@ -24,7 +26,7 @@ type Options struct {
 	OnClose ConnectionHandler
 
 	// OnError is a callback function that is called when process error
-	OnError func(ctx *Context, err error)
+	OnError ErrorHandler
 
 	// Middlewares is a lot of callback functions that are called when the connection send new message
 	Middlewares []HandleFunc
@@ -189,5 +191,12 @@ func WithCloseEvent(ev ConnectionHandler) Option {
 func WithOpenEvent(ev ConnectionHandler) Option {
 	return func(options *Options) {
 		options.OnOpen = ev
+	}
+}
+
+// WithErrorHandler sets the error handler
+func WithErrorHandler(handler ErrorHandler) Option {
+	return func(options *Options) {
+		options.OnError = handler
 	}
 }
