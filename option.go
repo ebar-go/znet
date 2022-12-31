@@ -177,3 +177,17 @@ func WithDebug() Option {
 		options.Debug = true
 	}
 }
+
+// WithCloseEvent sets the close event
+func WithCloseEvent(ev ConnectionHandler) Option {
+	return func(options *Options) {
+		options.OnClose = ev
+	}
+}
+
+// WithOpenEvent sets the open event
+func WithOpenEvent(ev ConnectionHandler) Option {
+	return func(options *Options) {
+		options.OnOpen = ev
+	}
+}
