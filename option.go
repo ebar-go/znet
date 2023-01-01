@@ -200,3 +200,10 @@ func WithErrorHandler(handler ErrorHandler) Option {
 		options.OnError = handler
 	}
 }
+
+// WithContentType sets the content type
+func WithContentType(contentType string) Option {
+	return func(options *Options) {
+		options.Thread.ContentType = contentType
+	}
+}
