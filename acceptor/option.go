@@ -13,7 +13,8 @@ type Options struct {
 	WriteDeadline   time.Duration
 	ReadDeadline    time.Duration
 	LengthOffset    int
-	ReuseThread     uint8
+	ReusePort       bool
+	reuseThread     int
 }
 
 func DefaultOptions() Options {
@@ -25,5 +26,6 @@ func DefaultOptions() Options {
 		WriteDeadline:   time.Second * 3,
 		ReadDeadline:    time.Second * 3,
 		LengthOffset:    4,
+		reuseThread:     runtime.NumCPU(),
 	}
 }

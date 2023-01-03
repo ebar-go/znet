@@ -19,7 +19,7 @@ type TCPAcceptor struct {
 
 // Run runs the acceptor
 func (acceptor *TCPAcceptor) Listen(onAccept func(conn net.Conn)) (err error) {
-	if acceptor.options.ReuseThread > 0 {
+	if acceptor.options.ReusePort {
 		return acceptor.listenReuseAddress(onAccept)
 	}
 	addr, err := net.ResolveTCPAddr("tcp", acceptor.schema.Addr)
@@ -46,7 +46,7 @@ func (acceptor *TCPAcceptor) listenReuseAddress(onAccept func(conn net.Conn)) (e
 		})
 	}
 
-	for i := uint8(0); i < acceptor.options.ReuseThread; i++ {
+	for i := 0; i < acceptor.options.reuseThread; i++ {
 		listener, lastErr := cfg.Listen(context.Background(), "tcp", acceptor.schema.Addr)
 		if lastErr != nil {
 			return lastErr
