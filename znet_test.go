@@ -32,6 +32,7 @@ func TestNew(t *testing.T) {
 		options.OnError = func(ctx *Context, err error) {
 			log.Printf("[%s] error: %v", ctx.Conn().ID(), err)
 		}
+		options.Acceptor.ReuseThread = 3
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
